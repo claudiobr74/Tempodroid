@@ -125,7 +125,9 @@ class MainActivity : ComponentActivity() {
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         OutlinedButton(
-                            onClick = { openUrl(PRIVACY_POLICY_URL) },
+                            onClick = {
+                                startActivity(Intent(this@MainActivity, PrivacyPolicyActivity::class.java))
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text("Política de privacidade")
@@ -141,12 +143,6 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text("Créditos e licença dos dados")
-                        }
-                        OutlinedButton(
-                            onClick = { openUrl(SUPPORT_URL) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Suporte")
                         }
 
                         Text(
@@ -178,11 +174,6 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        private const val PRIVACY_POLICY_URL =
-            "https://github.com/claudiobr74/Tempodroid/blob/main/docs/privacy-policy.md"
-        private const val SUPPORT_URL =
-            "https://github.com/claudiobr74/Tempodroid/issues"
-        private const val OPEN_METEO_URL =
-            "https://open-meteo.com/"
+        private const val OPEN_METEO_URL = "https://open-meteo.com/"
     }
 }
