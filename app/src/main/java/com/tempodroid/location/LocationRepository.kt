@@ -16,6 +16,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.time.ZoneId
 import java.util.Locale
 
@@ -25,25 +27,30 @@ class LocationRepository(
     private val preferences: PreferencesRepository,
     private val http: HttpGetter,
 ) {
-    suspend fun resolve(allowFreshDeviceLocation: Boolean = false): ResolvedLocation {
-        cache.savedLocation()?.let { saved ->
-            if (saved.source != LocationSource.FALLBACK) return saved.copy(source = LocationSource.SAVED_COORDINATES)
-        }
+    suspend fun resolve(
+        appWidgetId: Int? = null,
+        allowFreshDeviceLocation: Boolean = false,
+    ): ResolvedLocation {
+        cache.savedLocation(appWidgetId)?.let { return it }
+
         if (allowFreshDeviceLocation) {
             lastKnownCoarse()?.let { device ->
-                cache.saveLocation(device)
+                cache.saveLocation(device, appWidgetId, markConfigured = false)
                 return device
             }
         }
-        preferences.manualCity()?.let { city ->
-            geocode(city)?.let {
-                cache.saveLocation(it)
-                return it
+
+        if (appWidgetId == null) {
+            preferences.manualCity()?.let { city ->
+                geocode(city)?.let {
+                    cache.saveLocation(it)
+                    return it
+                }
             }
         }
-        cache.savedLocation()?.let { return it }
+
         val fallback = LocationFallback.goiania
-        cache.saveLocation(fallback)
+        cache.saveLocation(fallback, appWidgetId, markConfigured = false)
         return fallback
     }
 
@@ -84,19 +91,31 @@ class LocationRepository(
             }.getOrNull()
         }
 
-    suspend fun geocode(city: String): ResolvedLocation? {
-        val url = "https://geocoding-api.open-meteo.com/v1/search?name=${city.trim()}&count=1&language=pt&format=json"
-        return runCatching {
-            val body = http.get(url)
-            val root = Json.parseToJsonElement(body).jsonObject
-            val result = root["results"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
-            ResolvedLocation(
-                city = result["name"]?.jsonPrimitive?.content ?: city,
-                latitude = result["latitude"]?.jsonPrimitive?.content?.toDouble() ?: return null,
-                longitude = result["longitude"]?.jsonPrimitive?.content?.toDouble() ?: return null,
+    suspend fun searchCities(query: String, limit: Int = 5): List<LocationSearchResult> {
+        val normalized = query.trim()
+        if (normalized.length < 2) return emptyList()
+        val encoded = URLEncoder.encode(normalized, StandardCharsets.UTF_8.toString())
+        val count = limit.coerceIn(1, 10)
+        val url = "https://geocoding-api.open-meteo.com/v1/search?name=$encoded&count=$count&language=pt&format=json"
+        val body = http.get(url)
+        val root = Json.parseToJsonElement(body).jsonObject
+        return root["results"]?.jsonArray.orEmpty().mapNotNull { element ->
+            val result = element.jsonObject
+            val name = result["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            val latitude = result["latitude"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: return@mapNotNull null
+            val longitude = result["longitude"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: return@mapNotNull null
+            LocationSearchResult(
+                name = name,
+                admin1 = result["admin1"]?.jsonPrimitive?.content,
+                country = result["country"]?.jsonPrimitive?.content,
+                latitude = latitude,
+                longitude = longitude,
                 timezoneId = result["timezone"]?.jsonPrimitive?.content ?: LocationFallback.goiania.timezoneId,
-                source = LocationSource.MANUAL_CITY,
             )
-        }.getOrNull()
+        }
     }
+
+    suspend fun geocode(city: String): ResolvedLocation? = runCatching {
+        searchCities(city, limit = 1).firstOrNull()?.toResolvedLocation()
+    }.getOrNull()
 }

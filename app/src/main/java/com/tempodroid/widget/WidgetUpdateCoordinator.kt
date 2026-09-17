@@ -9,6 +9,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.tempodroid.workers.WeatherUpdateWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,11 +18,11 @@ import java.util.concurrent.TimeUnit
 
 object WidgetUpdateCoordinator {
     const val UNIQUE_PERIODIC = "solar_weather_widget_periodic"
-    const val UNIQUE_ONCE = "solar_weather_widget_once"
+    const val UNIQUE_ONCE_ALL = "solar_weather_widget_once_all"
+    const val KEY_APP_WIDGET_ID = "app_widget_id"
 
     fun ensurePeriodic(context: Context) {
-        val request = PeriodicWorkRequestBuilder<WeatherUpdateWorker>(30, TimeUnit.MINUTES)
-            .build()
+        val request = PeriodicWorkRequestBuilder<WeatherUpdateWorker>(30, TimeUnit.MINUTES).build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             UNIQUE_PERIODIC,
             ExistingPeriodicWorkPolicy.KEEP,
@@ -29,10 +30,24 @@ object WidgetUpdateCoordinator {
         )
     }
 
+    /** Atualiza todas as instâncias ativas usando um único Worker. */
     fun refreshNow(context: Context) {
         val request = OneTimeWorkRequestBuilder<WeatherUpdateWorker>().build()
         WorkManager.getInstance(context).enqueueUniqueWork(
-            UNIQUE_ONCE,
+            UNIQUE_ONCE_ALL,
+            ExistingWorkPolicy.REPLACE,
+            request,
+        )
+        ensurePeriodic(context)
+    }
+
+    /** Atualiza somente a instância informada, sem criar job periódico por widget. */
+    fun refreshWidget(context: Context, appWidgetId: Int) {
+        val request = OneTimeWorkRequestBuilder<WeatherUpdateWorker>()
+            .setInputData(workDataOf(KEY_APP_WIDGET_ID to appWidgetId))
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "solar_weather_widget_once_$appWidgetId",
             ExistingWorkPolicy.REPLACE,
             request,
         )
@@ -45,6 +60,7 @@ object WidgetUpdateCoordinator {
             val ids = manager.getGlanceIds(SolarWeatherWidget::class.java)
             if (ids.isEmpty()) {
                 WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_PERIODIC)
+                WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_ONCE_ALL)
             }
         }
     }

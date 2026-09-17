@@ -1,5 +1,6 @@
 package com.tempodroid.widget
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -19,6 +20,7 @@ import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
@@ -36,7 +38,6 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -46,16 +47,16 @@ import com.tempodroid.accessibility.WidgetContentDescription
 import com.tempodroid.di.AppContainer
 import com.tempodroid.fixtures.DailySummaryFormatter
 import com.tempodroid.ui.MainActivity
+import com.tempodroid.ui.WidgetConfigurationActivity
 import com.tempodroid.ui.WidgetDimensions
 import com.tempodroid.ui.WidgetLayoutMode
 import com.tempodroid.ui.WidgetTheme
 import com.tempodroid.weather.WeatherCodeMapper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
-/**
- * Widget 4×2 SolarWeatherWidget.
- *
- * Relógio: [WidgetTheme.CLOCK_STRATEGY]
- */
+/** Widget 4×2 SolarWeatherWidget. */
 class SolarWeatherWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Responsive(
@@ -67,17 +68,18 @@ class SolarWeatherWidget : GlanceAppWidget() {
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val state = AppContainer.get(context).cache.loadState()
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+        val state = AppContainer.get(context).cache.loadState(appWidgetId)
         provideContent {
             GlanceTheme {
-                SolarWeatherContent(state)
+                SolarWeatherContent(state, appWidgetId)
             }
         }
     }
 }
 
 @Composable
-private fun SolarWeatherContent(state: SolarWeatherWidgetState) {
+private fun SolarWeatherContent(state: SolarWeatherWidgetState, appWidgetId: Int) {
     val context = LocalContext.current
     val size = LocalSize.current
     val density = context.resources.displayMetrics.density
@@ -86,9 +88,9 @@ private fun SolarWeatherContent(state: SolarWeatherWidgetState) {
     val bitmaps = WidgetRenderer.render(context, state, widthPx, heightPx)
     val compact = bitmaps.mode == WidgetLayoutMode.COMPACT
     val description = WidgetContentDescription.forState(state)
-    val home = actionStartActivity(deepLink(context, "tempodroid://home"))
-    val weather = actionStartActivity(deepLink(context, "tempodroid://weather"))
-    val forecast = actionStartActivity(deepLink(context, "tempodroid://forecast"))
+    val configure = actionStartActivity(configurationIntent(context, appWidgetId))
+    val weather = actionStartActivity(deepLink(context, "tempodroid://weather", appWidgetId))
+    val forecast = actionStartActivity(deepLink(context, "tempodroid://forecast", appWidgetId))
     val white = ColorProvider(Color.White)
     val secondary = ColorProvider(Color(0xE6FFFFFF))
 
@@ -97,7 +99,7 @@ private fun SolarWeatherContent(state: SolarWeatherWidgetState) {
             .fillMaxSize()
             .appWidgetBackground()
             .cornerRadius(WidgetDimensions.CORNER_RADIUS_DP.dp)
-            .clickable(home),
+            .clickable(configure),
     ) {
         Image(
             provider = ImageProvider(bitmaps.sky),
@@ -188,9 +190,17 @@ private fun SolarWeatherContent(state: SolarWeatherWidgetState) {
     }
 }
 
-private fun deepLink(context: Context, uri: String): Intent =
+private fun configurationIntent(context: Context, appWidgetId: Int): Intent =
+    Intent(context, WidgetConfigurationActivity::class.java).apply {
+        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        putExtra(WidgetConfigurationActivity.EXTRA_EDIT_MODE, true)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+
+private fun deepLink(context: Context, uri: String, appWidgetId: Int): Intent =
     Intent(context, MainActivity::class.java).apply {
         data = Uri.parse(uri)
+        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
     }
 
@@ -199,7 +209,20 @@ class SolarWeatherWidgetReceiver : GlanceAppWidgetReceiver() {
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
-        WidgetUpdateCoordinator.refreshNow(context)
+        WidgetUpdateCoordinator.ensurePeriodic(context)
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        super.onDeleted(context, appWidgetIds)
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val cache = AppContainer.get(context).cache
+                appWidgetIds.forEach { cache.deleteWidgetState(it) }
+            } finally {
+                pending.finish()
+            }
+        }
     }
 
     override fun onDisabled(context: Context) {
@@ -209,7 +232,7 @@ class SolarWeatherWidgetReceiver : GlanceAppWidgetReceiver() {
 
     override fun onUpdate(
         context: Context,
-        appWidgetManager: android.appwidget.AppWidgetManager,
+        appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
