@@ -8,6 +8,28 @@ data class ResolvedLocation(
     val source: LocationSource,
 )
 
+data class LocationSearchResult(
+    val name: String,
+    val admin1: String?,
+    val country: String?,
+    val latitude: Double,
+    val longitude: Double,
+    val timezoneId: String,
+) {
+    val secondaryLabel: String
+        get() = listOfNotNull(admin1?.takeIf { it.isNotBlank() }, country?.takeIf { it.isNotBlank() })
+            .distinct()
+            .joinToString(" · ")
+
+    fun toResolvedLocation(): ResolvedLocation = ResolvedLocation(
+        city = name,
+        latitude = latitude,
+        longitude = longitude,
+        timezoneId = timezoneId,
+        source = LocationSource.MANUAL_CITY,
+    )
+}
+
 enum class LocationSource {
     SAVED_COORDINATES,
     AUTHORIZED_COARSE,
