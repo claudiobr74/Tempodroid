@@ -2,6 +2,15 @@ name: Build signed Play Store AAB
 
 on:
   workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Android versionCode"
+        required: true
+        default: "1"
+      version_name:
+        description: "Versão pública (ex.: 1.0.0)"
+        required: true
+        default: "1.0.0"
 
 permissions:
   contents: read
@@ -34,6 +43,8 @@ jobs:
 
       - name: Build signed release bundle
         env:
+          TEMPODROID_VERSION_CODE: ${{ inputs.version_code }}
+          TEMPODROID_VERSION_NAME: ${{ inputs.version_name }}
           TEMPODROID_KEYSTORE_PATH: ${{ runner.temp }}/tempodroid-upload.jks
           TEMPODROID_KEYSTORE_PASSWORD: ${{ secrets.TEMPODROID_KEYSTORE_PASSWORD }}
           TEMPODROID_KEY_ALIAS: ${{ secrets.TEMPODROID_KEY_ALIAS }}
