@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val releaseVersionCode = System.getenv("TEMPODROID_VERSION_CODE")?.toIntOrNull() ?: 1
+val releaseVersionName = System.getenv("TEMPODROID_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.0.0"
 val releaseKeystorePath = System.getenv("TEMPODROID_KEYSTORE_PATH")
 val releaseKeystorePassword = System.getenv("TEMPODROID_KEYSTORE_PASSWORD")
 val releaseKeyAlias = System.getenv("TEMPODROID_KEY_ALIAS")
@@ -28,8 +30,8 @@ android {
         applicationId = "com.tempodroid"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
