@@ -42,3 +42,11 @@ jobs:
           archive: false
           if-no-files-found: error
           retention-days: 14
+
+      - name: Preserve R8 mapping
+        uses: actions/upload-artifact@v7
+        with:
+          name: r8-mapping-validation
+          path: app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+          retention-days: 14
