@@ -47,10 +47,7 @@ class PreferencesRepository(private val context: Context) {
 }
 
 /**
- * Cache do widget isolado por appWidgetId.
- *
- * As chaves globais antigas continuam sendo lidas como fallback de migração, mas toda nova
- * configuração/atualização de widget deve gravar com appWidgetId.
+ * Cache isolado por appWidgetId. As chaves globais antigas permanecem como fallback de migração.
  */
 class WidgetCacheRepository(private val context: Context) {
     private object Names {
@@ -79,12 +76,6 @@ class WidgetCacheRepository(private val context: Context) {
         const val illumination = "illumination"
         const val hasError = "has_error"
         const val dateLabel = "date_label"
-
-        val all = listOf(
-            configured, city, lat, lon, timezone, source, temperature, condition, high, low, rain,
-            cloud, precipitation, weatherCode, isDay, weatherAt, sunrise, sunset, solarNoon,
-            moonrise, moonset, moonPhase, illumination, hasError, dateLabel,
-        )
     }
 
     private fun scoped(name: String, appWidgetId: Int?): String =
@@ -99,14 +90,20 @@ class WidgetCacheRepository(private val context: Context) {
     suspend fun isConfigured(appWidgetId: Int): Boolean =
         context.dataStore.data.first()[boolKey(Names.configured, appWidgetId)] == true
 
-    suspend fun saveLocation(location: ResolvedLocation, appWidgetId: Int? = null) {
+    suspend fun saveLocation(
+        location: ResolvedLocation,
+        appWidgetId: Int? = null,
+        markConfigured: Boolean = appWidgetId != null,
+    ) {
         context.dataStore.edit {
             it[stringKey(Names.city, appWidgetId)] = location.city
             it[doubleKey(Names.lat, appWidgetId)] = location.latitude
             it[doubleKey(Names.lon, appWidgetId)] = location.longitude
             it[stringKey(Names.timezone, appWidgetId)] = location.timezoneId
             it[stringKey(Names.source, appWidgetId)] = location.source.name
-            if (appWidgetId != null) it[boolKey(Names.configured, appWidgetId)] = true
+            if (appWidgetId != null && markConfigured) {
+                it[boolKey(Names.configured, appWidgetId)] = true
+            }
         }
     }
 
@@ -116,7 +113,7 @@ class WidgetCacheRepository(private val context: Context) {
     suspend fun savedLocation(appWidgetId: Int? = null): ResolvedLocation? {
         val prefs = context.dataStore.data.first()
         return locationFrom(prefs, appWidgetId)
-            ?: if (appWidgetId != null) locationFrom(prefs, null) else null
+            ?: (if (appWidgetId != null) locationFrom(prefs, null) else null)
     }
 
     private fun locationFrom(prefs: Preferences, appWidgetId: Int?): ResolvedLocation? {
@@ -152,19 +149,17 @@ class WidgetCacheRepository(private val context: Context) {
 
     suspend fun clearWeather(appWidgetId: Int) {
         context.dataStore.edit {
-            listOf(
-                intKey(Names.temperature, appWidgetId),
-                stringKey(Names.condition, appWidgetId),
-                intKey(Names.high, appWidgetId),
-                intKey(Names.low, appWidgetId),
-                intKey(Names.rain, appWidgetId),
-                intKey(Names.cloud, appWidgetId),
-                doubleKey(Names.precipitation, appWidgetId),
-                intKey(Names.weatherCode, appWidgetId),
-                boolKey(Names.isDay, appWidgetId),
-                longKey(Names.weatherAt, appWidgetId),
-                boolKey(Names.hasError, appWidgetId),
-            ).forEach { key -> it.remove(key) }
+            it.remove(intKey(Names.temperature, appWidgetId))
+            it.remove(stringKey(Names.condition, appWidgetId))
+            it.remove(intKey(Names.high, appWidgetId))
+            it.remove(intKey(Names.low, appWidgetId))
+            it.remove(intKey(Names.rain, appWidgetId))
+            it.remove(intKey(Names.cloud, appWidgetId))
+            it.remove(doubleKey(Names.precipitation, appWidgetId))
+            it.remove(intKey(Names.weatherCode, appWidgetId))
+            it.remove(boolKey(Names.isDay, appWidgetId))
+            it.remove(longKey(Names.weatherAt, appWidgetId))
+            it.remove(boolKey(Names.hasError, appWidgetId))
         }
     }
 
@@ -210,12 +205,12 @@ class WidgetCacheRepository(private val context: Context) {
 
     fun weatherFrom(prefs: Preferences, appWidgetId: Int? = null): WeatherData? =
         weatherFromExact(prefs, appWidgetId)
-            ?: if (appWidgetId != null) weatherFromExact(prefs, null) else null
+            ?: (if (appWidgetId != null) weatherFromExact(prefs, null) else null)
 
     suspend fun loadState(appWidgetId: Int? = null, now: Instant = Instant.now()): SolarWeatherWidgetState {
         val prefs = context.dataStore.data.first()
         val location = locationFrom(prefs, appWidgetId)
-            ?: if (appWidgetId != null) locationFrom(prefs, null) else null
+            ?: (if (appWidgetId != null) locationFrom(prefs, null) else null)
             ?: LocationFallback.goiania
         val zone = runCatching { ZoneId.of(location.timezoneId) }
             .getOrDefault(ZoneId.of(LocationFallback.goiania.timezoneId))
@@ -223,11 +218,11 @@ class WidgetCacheRepository(private val context: Context) {
         val weather = weatherFrom(prefs, appWidgetId)
 
         fun scopedString(name: String): String? = prefs[stringKey(name, appWidgetId)]
-            ?: if (appWidgetId != null) prefs[stringKey(name, null)] else null
+            ?: (if (appWidgetId != null) prefs[stringKey(name, null)] else null)
         fun scopedDouble(name: String): Double? = prefs[doubleKey(name, appWidgetId)]
-            ?: if (appWidgetId != null) prefs[doubleKey(name, null)] else null
+            ?: (if (appWidgetId != null) prefs[doubleKey(name, null)] else null)
         fun scopedBool(name: String): Boolean? = prefs[boolKey(name, appWidgetId)]
-            ?: if (appWidgetId != null) prefs[boolKey(name, null)] else null
+            ?: (if (appWidgetId != null) prefs[boolKey(name, null)] else null)
 
         val astronomy = AstronomyData(
             sunrise = scopedString(Names.sunrise).toLocalTimeOr(LocalTime.of(6, 10)),
@@ -262,12 +257,32 @@ class WidgetCacheRepository(private val context: Context) {
     }
 
     suspend fun deleteWidgetState(appWidgetId: Int) {
-        context.dataStore.edit { prefs ->
-            Names.all.forEach { name ->
-                prefs.asMap().keys
-                    .filter { it.name == scoped(name, appWidgetId) }
-                    .forEach { prefs.remove(it) }
-            }
+        context.dataStore.edit {
+            it.remove(boolKey(Names.configured, appWidgetId))
+            it.remove(stringKey(Names.city, appWidgetId))
+            it.remove(doubleKey(Names.lat, appWidgetId))
+            it.remove(doubleKey(Names.lon, appWidgetId))
+            it.remove(stringKey(Names.timezone, appWidgetId))
+            it.remove(stringKey(Names.source, appWidgetId))
+            it.remove(intKey(Names.temperature, appWidgetId))
+            it.remove(stringKey(Names.condition, appWidgetId))
+            it.remove(intKey(Names.high, appWidgetId))
+            it.remove(intKey(Names.low, appWidgetId))
+            it.remove(intKey(Names.rain, appWidgetId))
+            it.remove(intKey(Names.cloud, appWidgetId))
+            it.remove(doubleKey(Names.precipitation, appWidgetId))
+            it.remove(intKey(Names.weatherCode, appWidgetId))
+            it.remove(boolKey(Names.isDay, appWidgetId))
+            it.remove(longKey(Names.weatherAt, appWidgetId))
+            it.remove(stringKey(Names.sunrise, appWidgetId))
+            it.remove(stringKey(Names.sunset, appWidgetId))
+            it.remove(stringKey(Names.solarNoon, appWidgetId))
+            it.remove(stringKey(Names.moonrise, appWidgetId))
+            it.remove(stringKey(Names.moonset, appWidgetId))
+            it.remove(stringKey(Names.moonPhase, appWidgetId))
+            it.remove(doubleKey(Names.illumination, appWidgetId))
+            it.remove(boolKey(Names.hasError, appWidgetId))
+            it.remove(stringKey(Names.dateLabel, appWidgetId))
         }
     }
 }
