@@ -25,6 +25,19 @@ O bundle de release não assinado é criado em:
 
 Use o **Play App Signing** e mantenha apenas a upload key sob controle do desenvolvedor.
 
+Para criar uma upload key nova em uma máquina confiável:
+
+```bash
+keytool -genkeypair -v \
+  -keystore tempodroid-upload.jks \
+  -alias upload \
+  -keyalg RSA \
+  -keysize 4096 \
+  -validity 10000
+```
+
+Guarde o arquivo e as senhas em local seguro, fora do repositório.
+
 Nunca faça commit de:
 
 - `.jks` / `.keystore`;
@@ -32,8 +45,10 @@ Nunca faça commit de:
 - `keystore.properties`;
 - AAB/APK de produção.
 
-O projeto aceita assinatura via variáveis de ambiente:
+O projeto aceita versão e assinatura via variáveis de ambiente:
 
+- `TEMPODROID_VERSION_CODE`
+- `TEMPODROID_VERSION_NAME`
 - `TEMPODROID_KEYSTORE_PATH`
 - `TEMPODROID_KEYSTORE_PASSWORD`
 - `TEMPODROID_KEY_ALIAS`
@@ -42,6 +57,8 @@ O projeto aceita assinatura via variáveis de ambiente:
 Exemplo:
 
 ```bash
+export TEMPODROID_VERSION_CODE=1
+export TEMPODROID_VERSION_NAME=1.0.0
 export TEMPODROID_KEYSTORE_PATH=/caminho/tempodroid-upload.jks
 export TEMPODROID_KEYSTORE_PASSWORD='***'
 export TEMPODROID_KEY_ALIAS='upload'
@@ -74,7 +91,9 @@ No macOS:
 base64 tempodroid-upload.jks | tr -d '\n'
 ```
 
-Depois execute **Build signed Play Store AAB** em Actions → Run workflow.
+Depois execute **Build signed Play Store AAB** em Actions → Run workflow, preenchendo `version_code` e `version_name`.
+
+Nunca reutilize um `versionCode` já enviado ao Play Console. Cada nova versão precisa de um número maior.
 
 ## Checklist antes do upload
 
@@ -90,7 +109,8 @@ Depois execute **Build signed Play Store AAB** em Actions → Run workflow.
 - Modo offline mantém o último clima válido.
 - Testes em Android 8 (API 26), Android 12, Android 14 e Android 16.
 - Pelo menos um launcher Google/Pixel, Samsung One UI e Xiaomi/HyperOS quando disponíveis.
-- Política de privacidade publicada em URL pública.
+- Política de privacidade publicada em URL HTTPS pública e sem login.
+- Política contém nome do app/desenvolvedor e um contato público de privacidade.
 - Formulário Segurança dos dados revisado.
 - Classificação indicativa preenchida.
 - Declaração de anúncios: sem anúncios na versão 1.0.0.
@@ -114,6 +134,18 @@ A política de privacidade está em:
 
 `docs/privacy-policy.md`
 
+A versão HTML pronta para hospedagem está em:
+
+`docs/privacy-policy.html`
+
 O rascunho do formulário Segurança dos dados está em:
 
 `docs/data-safety.md`
+
+As declarações sugeridas do Play Console estão em:
+
+`docs/play-console-declarations.md`
+
+O plano de screenshots e feature graphic está em:
+
+`store-assets/README.md`
