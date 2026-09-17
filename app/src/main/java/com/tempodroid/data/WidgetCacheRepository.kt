@@ -46,134 +46,207 @@ class PreferencesRepository(private val context: Context) {
     }
 }
 
+/**
+ * Cache do widget isolado por appWidgetId.
+ *
+ * As chaves globais antigas continuam sendo lidas como fallback de migração, mas toda nova
+ * configuração/atualização de widget deve gravar com appWidgetId.
+ */
 class WidgetCacheRepository(private val context: Context) {
-    private object Keys {
-        val city = stringPreferencesKey("city")
-        val lat = doublePreferencesKey("lat")
-        val lon = doublePreferencesKey("lon")
-        val timezone = stringPreferencesKey("timezone")
-        val source = stringPreferencesKey("location_source")
-        val temperature = intPreferencesKey("temperature")
-        val condition = stringPreferencesKey("condition")
-        val high = intPreferencesKey("high")
-        val low = intPreferencesKey("low")
-        val rain = intPreferencesKey("rain")
-        val cloud = intPreferencesKey("cloud")
-        val precipitation = doublePreferencesKey("precipitation")
-        val weatherCode = intPreferencesKey("weather_code")
-        val isDay = booleanPreferencesKey("is_day")
-        val weatherAt = longPreferencesKey("weather_at")
-        val sunrise = stringPreferencesKey("sunrise")
-        val sunset = stringPreferencesKey("sunset")
-        val solarNoon = stringPreferencesKey("solar_noon")
-        val moonrise = stringPreferencesKey("moonrise")
-        val moonset = stringPreferencesKey("moonset")
-        val moonPhase = stringPreferencesKey("moon_phase")
-        val illumination = doublePreferencesKey("illumination")
-        val hasError = booleanPreferencesKey("has_error")
-        val dateLabel = stringPreferencesKey("date_label")
+    private object Names {
+        const val configured = "configured"
+        const val city = "city"
+        const val lat = "lat"
+        const val lon = "lon"
+        const val timezone = "timezone"
+        const val source = "location_source"
+        const val temperature = "temperature"
+        const val condition = "condition"
+        const val high = "high"
+        const val low = "low"
+        const val rain = "rain"
+        const val cloud = "cloud"
+        const val precipitation = "precipitation"
+        const val weatherCode = "weather_code"
+        const val isDay = "is_day"
+        const val weatherAt = "weather_at"
+        const val sunrise = "sunrise"
+        const val sunset = "sunset"
+        const val solarNoon = "solar_noon"
+        const val moonrise = "moonrise"
+        const val moonset = "moonset"
+        const val moonPhase = "moon_phase"
+        const val illumination = "illumination"
+        const val hasError = "has_error"
+        const val dateLabel = "date_label"
+
+        val all = listOf(
+            configured, city, lat, lon, timezone, source, temperature, condition, high, low, rain,
+            cloud, precipitation, weatherCode, isDay, weatherAt, sunrise, sunset, solarNoon,
+            moonrise, moonset, moonPhase, illumination, hasError, dateLabel,
+        )
     }
 
-    suspend fun saveLocation(location: ResolvedLocation) {
+    private fun scoped(name: String, appWidgetId: Int?): String =
+        if (appWidgetId == null) name else "widget_${appWidgetId}_$name"
+
+    private fun stringKey(name: String, appWidgetId: Int? = null) = stringPreferencesKey(scoped(name, appWidgetId))
+    private fun intKey(name: String, appWidgetId: Int? = null) = intPreferencesKey(scoped(name, appWidgetId))
+    private fun longKey(name: String, appWidgetId: Int? = null) = longPreferencesKey(scoped(name, appWidgetId))
+    private fun doubleKey(name: String, appWidgetId: Int? = null) = doublePreferencesKey(scoped(name, appWidgetId))
+    private fun boolKey(name: String, appWidgetId: Int? = null) = booleanPreferencesKey(scoped(name, appWidgetId))
+
+    suspend fun isConfigured(appWidgetId: Int): Boolean =
+        context.dataStore.data.first()[boolKey(Names.configured, appWidgetId)] == true
+
+    suspend fun saveLocation(location: ResolvedLocation, appWidgetId: Int? = null) {
         context.dataStore.edit {
-            it[Keys.city] = location.city
-            it[Keys.lat] = location.latitude
-            it[Keys.lon] = location.longitude
-            it[Keys.timezone] = location.timezoneId
-            it[Keys.source] = location.source.name
+            it[stringKey(Names.city, appWidgetId)] = location.city
+            it[doubleKey(Names.lat, appWidgetId)] = location.latitude
+            it[doubleKey(Names.lon, appWidgetId)] = location.longitude
+            it[stringKey(Names.timezone, appWidgetId)] = location.timezoneId
+            it[stringKey(Names.source, appWidgetId)] = location.source.name
+            if (appWidgetId != null) it[boolKey(Names.configured, appWidgetId)] = true
         }
     }
 
-    suspend fun savedLocation(): ResolvedLocation? {
+    suspend fun savedLocationExact(appWidgetId: Int): ResolvedLocation? =
+        locationFrom(context.dataStore.data.first(), appWidgetId)
+
+    suspend fun savedLocation(appWidgetId: Int? = null): ResolvedLocation? {
         val prefs = context.dataStore.data.first()
-        val lat = prefs[Keys.lat] ?: return null
-        val lon = prefs[Keys.lon] ?: return null
+        return locationFrom(prefs, appWidgetId)
+            ?: if (appWidgetId != null) locationFrom(prefs, null) else null
+    }
+
+    private fun locationFrom(prefs: Preferences, appWidgetId: Int?): ResolvedLocation? {
+        val lat = prefs[doubleKey(Names.lat, appWidgetId)] ?: return null
+        val lon = prefs[doubleKey(Names.lon, appWidgetId)] ?: return null
         return ResolvedLocation(
-            city = prefs[Keys.city] ?: LocationFallback.goiania.city,
+            city = prefs[stringKey(Names.city, appWidgetId)] ?: LocationFallback.goiania.city,
             latitude = lat,
             longitude = lon,
-            timezoneId = prefs[Keys.timezone] ?: LocationFallback.goiania.timezoneId,
-            source = prefs[Keys.source]?.let { runCatching { LocationSource.valueOf(it) }.getOrNull() }
+            timezoneId = prefs[stringKey(Names.timezone, appWidgetId)] ?: LocationFallback.goiania.timezoneId,
+            source = prefs[stringKey(Names.source, appWidgetId)]
+                ?.let { runCatching { LocationSource.valueOf(it) }.getOrNull() }
                 ?: LocationSource.SAVED_COORDINATES,
         )
     }
 
-    suspend fun saveWeather(weather: WeatherData) {
+    suspend fun saveWeather(weather: WeatherData, appWidgetId: Int? = null) {
         context.dataStore.edit {
-            weather.temperature?.let { value -> it[Keys.temperature] = value }
-            it[Keys.condition] = weather.condition.name
-            weather.high?.let { value -> it[Keys.high] = value }
-            weather.low?.let { value -> it[Keys.low] = value }
-            weather.rainChance?.let { value -> it[Keys.rain] = value }
-            weather.cloudCover?.let { value -> it[Keys.cloud] = value }
-            weather.precipitation?.let { value -> it[Keys.precipitation] = value }
-            weather.weatherCode?.let { value -> it[Keys.weatherCode] = value }
-            it[Keys.isDay] = weather.isDay
-            weather.timestamp?.let { value -> it[Keys.weatherAt] = value.toEpochMilli() }
-            weather.timezoneId?.let { value -> it[Keys.timezone] = value }
-            it[Keys.hasError] = false
+            weather.temperature?.let { value -> it[intKey(Names.temperature, appWidgetId)] = value }
+            it[stringKey(Names.condition, appWidgetId)] = weather.condition.name
+            weather.high?.let { value -> it[intKey(Names.high, appWidgetId)] = value }
+            weather.low?.let { value -> it[intKey(Names.low, appWidgetId)] = value }
+            weather.rainChance?.let { value -> it[intKey(Names.rain, appWidgetId)] = value }
+            weather.cloudCover?.let { value -> it[intKey(Names.cloud, appWidgetId)] = value }
+            weather.precipitation?.let { value -> it[doubleKey(Names.precipitation, appWidgetId)] = value }
+            weather.weatherCode?.let { value -> it[intKey(Names.weatherCode, appWidgetId)] = value }
+            it[boolKey(Names.isDay, appWidgetId)] = weather.isDay
+            weather.timestamp?.let { value -> it[longKey(Names.weatherAt, appWidgetId)] = value.toEpochMilli() }
+            weather.timezoneId?.let { value -> it[stringKey(Names.timezone, appWidgetId)] = value }
+            it[boolKey(Names.hasError, appWidgetId)] = false
         }
     }
 
-    suspend fun markWeatherError() {
-        context.dataStore.edit { it[Keys.hasError] = true }
-    }
-
-    suspend fun saveAstronomy(data: AstronomyData) {
+    suspend fun clearWeather(appWidgetId: Int) {
         context.dataStore.edit {
-            it[Keys.sunrise] = data.sunrise.toString()
-            it[Keys.sunset] = data.sunset.toString()
-            data.solarNoon?.let { value -> it[Keys.solarNoon] = value.toString() }
-            data.moonrise?.let { value -> it[Keys.moonrise] = value.toString() } ?: it.remove(Keys.moonrise)
-            data.moonset?.let { value -> it[Keys.moonset] = value.toString() } ?: it.remove(Keys.moonset)
-            it[Keys.moonPhase] = data.moonPhase.name
-            it[Keys.illumination] = data.moonIllumination
+            listOf(
+                intKey(Names.temperature, appWidgetId),
+                stringKey(Names.condition, appWidgetId),
+                intKey(Names.high, appWidgetId),
+                intKey(Names.low, appWidgetId),
+                intKey(Names.rain, appWidgetId),
+                intKey(Names.cloud, appWidgetId),
+                doubleKey(Names.precipitation, appWidgetId),
+                intKey(Names.weatherCode, appWidgetId),
+                boolKey(Names.isDay, appWidgetId),
+                longKey(Names.weatherAt, appWidgetId),
+                boolKey(Names.hasError, appWidgetId),
+            ).forEach { key -> it.remove(key) }
         }
     }
 
-    suspend fun saveDateLabel(label: String) {
-        context.dataStore.edit { it[Keys.dateLabel] = label }
+    suspend fun markWeatherError(appWidgetId: Int? = null) {
+        context.dataStore.edit { it[boolKey(Names.hasError, appWidgetId)] = true }
     }
 
-    fun weatherFrom(prefs: Preferences): WeatherData? {
-        val condition = prefs[Keys.condition] ?: return null
+    suspend fun saveAstronomy(data: AstronomyData, appWidgetId: Int? = null) {
+        context.dataStore.edit {
+            it[stringKey(Names.sunrise, appWidgetId)] = data.sunrise.toString()
+            it[stringKey(Names.sunset, appWidgetId)] = data.sunset.toString()
+            data.solarNoon?.let { value -> it[stringKey(Names.solarNoon, appWidgetId)] = value.toString() }
+                ?: it.remove(stringKey(Names.solarNoon, appWidgetId))
+            data.moonrise?.let { value -> it[stringKey(Names.moonrise, appWidgetId)] = value.toString() }
+                ?: it.remove(stringKey(Names.moonrise, appWidgetId))
+            data.moonset?.let { value -> it[stringKey(Names.moonset, appWidgetId)] = value.toString() }
+                ?: it.remove(stringKey(Names.moonset, appWidgetId))
+            it[stringKey(Names.moonPhase, appWidgetId)] = data.moonPhase.name
+            it[doubleKey(Names.illumination, appWidgetId)] = data.moonIllumination
+        }
+    }
+
+    suspend fun saveDateLabel(label: String, appWidgetId: Int? = null) {
+        context.dataStore.edit { it[stringKey(Names.dateLabel, appWidgetId)] = label }
+    }
+
+    private fun weatherFromExact(prefs: Preferences, appWidgetId: Int?): WeatherData? {
+        val condition = prefs[stringKey(Names.condition, appWidgetId)] ?: return null
         return WeatherData(
-            temperature = prefs[Keys.temperature],
+            temperature = prefs[intKey(Names.temperature, appWidgetId)],
             condition = runCatching { WeatherCondition.valueOf(condition) }.getOrDefault(WeatherCondition.CLEAR),
-            high = prefs[Keys.high],
-            low = prefs[Keys.low],
-            rainChance = prefs[Keys.rain],
-            cloudCover = prefs[Keys.cloud],
-            precipitation = prefs[Keys.precipitation],
-            weatherCode = prefs[Keys.weatherCode],
-            isDay = prefs[Keys.isDay] ?: true,
-            timestamp = prefs[Keys.weatherAt]?.let { Instant.ofEpochMilli(it) },
-            timezoneId = prefs[Keys.timezone],
+            high = prefs[intKey(Names.high, appWidgetId)],
+            low = prefs[intKey(Names.low, appWidgetId)],
+            rainChance = prefs[intKey(Names.rain, appWidgetId)],
+            cloudCover = prefs[intKey(Names.cloud, appWidgetId)],
+            precipitation = prefs[doubleKey(Names.precipitation, appWidgetId)],
+            weatherCode = prefs[intKey(Names.weatherCode, appWidgetId)],
+            isDay = prefs[boolKey(Names.isDay, appWidgetId)] ?: true,
+            timestamp = prefs[longKey(Names.weatherAt, appWidgetId)]?.let { Instant.ofEpochMilli(it) },
+            timezoneId = prefs[stringKey(Names.timezone, appWidgetId)],
         )
     }
 
-    suspend fun loadState(now: Instant = Instant.now()): SolarWeatherWidgetState {
+    fun weatherFrom(prefs: Preferences, appWidgetId: Int? = null): WeatherData? =
+        weatherFromExact(prefs, appWidgetId)
+            ?: if (appWidgetId != null) weatherFromExact(prefs, null) else null
+
+    suspend fun loadState(appWidgetId: Int? = null, now: Instant = Instant.now()): SolarWeatherWidgetState {
         val prefs = context.dataStore.data.first()
-        val location = savedLocation() ?: LocationFallback.goiania
-        val zone = runCatching { ZoneId.of(location.timezoneId) }.getOrDefault(ZoneId.of("America/Sao_Paulo"))
+        val location = locationFrom(prefs, appWidgetId)
+            ?: if (appWidgetId != null) locationFrom(prefs, null) else null
+            ?: LocationFallback.goiania
+        val zone = runCatching { ZoneId.of(location.timezoneId) }
+            .getOrDefault(ZoneId.of(LocationFallback.goiania.timezoneId))
         val local = now.atZone(zone)
-        val weather = weatherFrom(prefs)
+        val weather = weatherFrom(prefs, appWidgetId)
+
+        fun scopedString(name: String): String? = prefs[stringKey(name, appWidgetId)]
+            ?: if (appWidgetId != null) prefs[stringKey(name, null)] else null
+        fun scopedDouble(name: String): Double? = prefs[doubleKey(name, appWidgetId)]
+            ?: if (appWidgetId != null) prefs[doubleKey(name, null)] else null
+        fun scopedBool(name: String): Boolean? = prefs[boolKey(name, appWidgetId)]
+            ?: if (appWidgetId != null) prefs[boolKey(name, null)] else null
+
         val astronomy = AstronomyData(
-            sunrise = prefs[Keys.sunrise].toLocalTimeOr(LocalTime.of(6, 10)),
-            sunset = prefs[Keys.sunset].toLocalTimeOr(LocalTime.of(18, 5)),
-            solarNoon = prefs[Keys.solarNoon].toLocalTimeOrNull(),
-            moonrise = prefs[Keys.moonrise].toLocalTimeOrNull(),
-            moonset = prefs[Keys.moonset].toLocalTimeOrNull(),
-            moonPhase = prefs[Keys.moonPhase]?.let { runCatching { MoonPhase.valueOf(it) }.getOrNull() }
+            sunrise = scopedString(Names.sunrise).toLocalTimeOr(LocalTime.of(6, 10)),
+            sunset = scopedString(Names.sunset).toLocalTimeOr(LocalTime.of(18, 5)),
+            solarNoon = scopedString(Names.solarNoon).toLocalTimeOrNull(),
+            moonrise = scopedString(Names.moonrise).toLocalTimeOrNull(),
+            moonset = scopedString(Names.moonset).toLocalTimeOrNull(),
+            moonPhase = scopedString(Names.moonPhase)
+                ?.let { runCatching { MoonPhase.valueOf(it) }.getOrNull() }
                 ?: MoonPhase.WAXING_CRESCENT,
-            moonIllumination = prefs[Keys.illumination] ?: 0.18,
+            moonIllumination = scopedDouble(Names.illumination) ?: 0.18,
             sunPosition = null,
             moonPosition = null,
             hemisphere = if (location.latitude < 0) Hemisphere.SOUTH else Hemisphere.NORTH,
         )
-        val dateLabel = prefs[Keys.dateLabel] ?: DateTimeFormatter.ofPattern("EEE, d 'de' MMM", Locale("pt", "BR"))
-            .format(local)
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pt", "BR")) else it.toString() }
+        val dateLabel = scopedString(Names.dateLabel)
+            ?: DateTimeFormatter.ofPattern("EEE, d 'de' MMM", Locale("pt", "BR"))
+                .format(local)
+                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pt", "BR")) else it.toString() }
         return WidgetStateMapper.merge(
             city = location.city,
             weather = weather,
@@ -183,9 +256,19 @@ class WidgetCacheRepository(private val context: Context) {
             latitude = location.latitude,
             longitude = location.longitude,
             timezoneId = location.timezoneId,
-            hasWeatherError = prefs[Keys.hasError] == true,
+            hasWeatherError = scopedBool(Names.hasError) == true,
             clock = now,
         )
+    }
+
+    suspend fun deleteWidgetState(appWidgetId: Int) {
+        context.dataStore.edit { prefs ->
+            Names.all.forEach { name ->
+                prefs.asMap().keys
+                    .filter { it.name == scoped(name, appWidgetId) }
+                    .forEach { prefs.remove(it) }
+            }
+        }
     }
 }
 
