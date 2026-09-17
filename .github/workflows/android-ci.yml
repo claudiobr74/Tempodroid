@@ -35,6 +35,15 @@ jobs:
       - name: Tests, lint, debug build and release bundle
         run: ./gradlew :core:test :app:test :app:lintRelease :app:assembleDebug :app:bundleRelease --stacktrace
 
+      - name: Upload installable debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: tempodroid-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          archive: false
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload release AAB validation artifact
         uses: actions/upload-artifact@v7
         with:
