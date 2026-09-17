@@ -47,7 +47,8 @@ class PreferencesRepository(private val context: Context) {
 }
 
 /**
- * Cache isolado por appWidgetId. As chaves globais antigas permanecem como fallback de migração.
+ * Cache isolado por appWidgetId. O estado global legado permanece apenas para a tela do app;
+ * uma instância de widget nunca reutiliza clima/astronomia de outra instância.
  */
 class WidgetCacheRepository(private val context: Context) {
     private object Names {
@@ -113,7 +114,6 @@ class WidgetCacheRepository(private val context: Context) {
     suspend fun savedLocation(appWidgetId: Int? = null): ResolvedLocation? {
         val prefs = context.dataStore.data.first()
         return locationFrom(prefs, appWidgetId)
-            ?: (if (appWidgetId != null) locationFrom(prefs, null) else null)
     }
 
     private fun locationFrom(prefs: Preferences, appWidgetId: Int?): ResolvedLocation? {
@@ -205,24 +205,18 @@ class WidgetCacheRepository(private val context: Context) {
 
     fun weatherFrom(prefs: Preferences, appWidgetId: Int? = null): WeatherData? =
         weatherFromExact(prefs, appWidgetId)
-            ?: (if (appWidgetId != null) weatherFromExact(prefs, null) else null)
 
     suspend fun loadState(appWidgetId: Int? = null, now: Instant = Instant.now()): SolarWeatherWidgetState {
         val prefs = context.dataStore.data.first()
-        val location = locationFrom(prefs, appWidgetId)
-            ?: (if (appWidgetId != null) locationFrom(prefs, null) else null)
-            ?: LocationFallback.goiania
+        val location = locationFrom(prefs, appWidgetId) ?: LocationFallback.goiania
         val zone = runCatching { ZoneId.of(location.timezoneId) }
             .getOrDefault(ZoneId.of(LocationFallback.goiania.timezoneId))
         val local = now.atZone(zone)
-        val weather = weatherFrom(prefs, appWidgetId)
+        val weather = weatherFromExact(prefs, appWidgetId)
 
         fun scopedString(name: String): String? = prefs[stringKey(name, appWidgetId)]
-            ?: (if (appWidgetId != null) prefs[stringKey(name, null)] else null)
         fun scopedDouble(name: String): Double? = prefs[doubleKey(name, appWidgetId)]
-            ?: (if (appWidgetId != null) prefs[doubleKey(name, null)] else null)
         fun scopedBool(name: String): Boolean? = prefs[boolKey(name, appWidgetId)]
-            ?: (if (appWidgetId != null) prefs[boolKey(name, null)] else null)
 
         val astronomy = AstronomyData(
             sunrise = scopedString(Names.sunrise).toLocalTimeOr(LocalTime.of(6, 10)),
