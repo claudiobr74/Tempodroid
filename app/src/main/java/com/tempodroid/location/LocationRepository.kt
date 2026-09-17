@@ -4,15 +4,20 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import com.tempodroid.data.PreferencesRepository
 import com.tempodroid.data.WidgetCacheRepository
 import com.tempodroid.weather.HttpGetter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.time.ZoneId
+import java.util.Locale
 
 class LocationRepository(
     private val context: Context,
@@ -43,7 +48,7 @@ class LocationRepository(
     }
 
     @SuppressLint("MissingPermission")
-    fun lastKnownCoarse(): ResolvedLocation? {
+    suspend fun lastKnownCoarse(): ResolvedLocation? {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) !=
             PackageManager.PERMISSION_GRANTED
         ) {
@@ -53,16 +58,31 @@ class LocationRepository(
         val location = manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
             ?: manager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
             ?: return null
+        val city = reverseGeocodeCity(location.latitude, location.longitude) ?: "Localização atual"
         return ResolvedLocation(
-            city = cacheCityOrUnknown(),
+            city = city,
             latitude = location.latitude,
             longitude = location.longitude,
-            timezoneId = java.time.ZoneId.systemDefault().id,
+            timezoneId = ZoneId.systemDefault().id,
             source = LocationSource.AUTHORIZED_COARSE,
         )
     }
 
-    private fun cacheCityOrUnknown(): String = LocationFallback.goiania.city
+    private suspend fun reverseGeocodeCity(latitude: Double, longitude: Double): String? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                @Suppress("DEPRECATION")
+                Geocoder(context, Locale("pt", "BR"))
+                    .getFromLocation(latitude, longitude, 1)
+                    ?.firstOrNull()
+                    ?.let { address ->
+                        address.locality
+                            ?: address.subAdminArea
+                            ?: address.adminArea
+                    }
+                    ?.takeIf { it.isNotBlank() }
+            }.getOrNull()
+        }
 
     suspend fun geocode(city: String): ResolvedLocation? {
         val url = "https://geocoding-api.open-meteo.com/v1/search?name=${city.trim()}&count=1&language=pt&format=json"

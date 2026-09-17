@@ -29,7 +29,8 @@ object DynamicSkyRenderer {
             moonIllumination = input.moonIllumination,
         )
         drawGradient(canvas, w, h, palette)
-        drawStars(canvas, w, h, palette, input, period)
+        drawStars(canvas, w, h, palette, input)
+
         val sun = input.sunPosition ?: SunPositionCalculator.position(
             input.localTime,
             input.sunrise,
@@ -53,6 +54,7 @@ object DynamicSkyRenderer {
                 intensity = intensity,
             )
         }
+
         val moon = input.moonPosition
         val isDay = period == DayPeriod.DAY || period == DayPeriod.MORNING || period == DayPeriod.AFTERNOON
         val moonVis = MoonTerminator.skyVisibility(
@@ -73,7 +75,9 @@ object DynamicSkyRenderer {
                 visibility = moonVis,
             )
         }
-        drawHorizon(canvas, w, h, period, palette)
+
+        drawAtmosphericHorizon(canvas, w, h, period, palette)
+
         val cover = effectiveCloudCover(input.cloudCover, input.weatherCondition)
         CloudRenderer.draw(
             canvas = canvas,
@@ -108,12 +112,13 @@ object DynamicSkyRenderer {
             WeatherCondition.HEAVY_RAIN -> 94
             WeatherCondition.STORM -> 98
         }
-        return (cloudCover ?: mapped).coerceIn(0, 100).coerceAtLeast(if (weather == WeatherCondition.CLEAR) 0 else mapped / 2)
+        return (cloudCover ?: mapped)
+            .coerceIn(0, 100)
+            .coerceAtLeast(if (weather == WeatherCondition.CLEAR) 0 else mapped / 2)
     }
 
     private fun drawGradient(canvas: Canvas, w: Int, h: Int, palette: SkyPalette) {
         val paint = Paint().apply {
-            color = palette.mid
             shader = LinearGradient(
                 0f,
                 0f,
@@ -125,13 +130,14 @@ object DynamicSkyRenderer {
             )
         }
         canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), paint)
+
         val glow = Paint().apply {
             shader = LinearGradient(
                 w * 0.55f,
                 h * 0.15f,
                 w * 0.85f,
                 h * 0.85f,
-                intArrayOf(palette.glow and 0x55FFFFFF, Color.TRANSPARENT),
+                intArrayOf(withAlpha(palette.glow, 84), Color.TRANSPARENT),
                 null,
                 Shader.TileMode.CLAMP,
             )
@@ -145,7 +151,6 @@ object DynamicSkyRenderer {
         h: Int,
         palette: SkyPalette,
         input: SkyRenderInput,
-        period: DayPeriod,
     ) {
         if (palette.starAlpha < 8) return
         val random = Random(20260917)
@@ -165,30 +170,68 @@ object DynamicSkyRenderer {
         }
     }
 
-    private fun drawHorizon(canvas: Canvas, w: Int, h: Int, period: DayPeriod, palette: SkyPalette) {
-        val path = Path()
-        val base = h * 0.78f
-        path.moveTo(0f, h.toFloat())
-        path.lineTo(0f, base)
-        path.quadTo(w * 0.18f, base - h * 0.08f, w * 0.34f, base - h * 0.04f)
-        path.quadTo(w * 0.52f, base - h * 0.12f, w * 0.70f, base - h * 0.05f)
-        path.quadTo(w * 0.86f, base - h * 0.09f, w.toFloat(), base - h * 0.03f)
-        path.lineTo(w.toFloat(), h.toFloat())
-        path.close()
-        val color = when (period) {
-            DayPeriod.NIGHT, DayPeriod.TWILIGHT -> 0xFF0B1528.toInt()
-            DayPeriod.SUNSET -> 0xFF2A1830.toInt()
-            else -> 0xFF1A3A48.toInt()
+    private fun drawAtmosphericHorizon(
+        canvas: Canvas,
+        w: Int,
+        h: Int,
+        period: DayPeriod,
+        palette: SkyPalette,
+    ) {
+        val haze = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(
+                0f,
+                h * 0.58f,
+                0f,
+                h.toFloat(),
+                intArrayOf(
+                    Color.TRANSPARENT,
+                    withAlpha(palette.horizon, 44),
+                    withAlpha(palette.horizon, 108),
+                ),
+                floatArrayOf(0f, 0.55f, 1f),
+                Shader.TileMode.CLAMP,
+            )
         }
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
-        canvas.drawPath(path, paint)
+        canvas.drawRect(0f, h * 0.58f, w.toFloat(), h.toFloat(), haze)
+
+        val showSilhouette = period == DayPeriod.NIGHT ||
+            period == DayPeriod.TWILIGHT ||
+            period == DayPeriod.SUNSET ||
+            period == DayPeriod.DAWN
+        if (!showSilhouette) return
+
+        val base = h * 0.92f
+        val path = Path().apply {
+            moveTo(0f, h.toFloat())
+            lineTo(0f, base)
+            quadTo(w * 0.18f, base - h * 0.025f, w * 0.34f, base - h * 0.012f)
+            quadTo(w * 0.52f, base - h * 0.035f, w * 0.70f, base - h * 0.016f)
+            quadTo(w * 0.86f, base - h * 0.026f, w.toFloat(), base - h * 0.010f)
+            lineTo(w.toFloat(), h.toFloat())
+            close()
+        }
+        val silhouette = when (period) {
+            DayPeriod.NIGHT, DayPeriod.TWILIGHT -> Color.argb(150, 8, 16, 30)
+            DayPeriod.SUNSET -> Color.argb(110, 40, 24, 44)
+            else -> Color.argb(78, 20, 40, 48)
+        }
+        canvas.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = silhouette })
+
         if (period == DayPeriod.NIGHT || period == DayPeriod.TWILIGHT) {
             val lights = Paint(Paint.ANTI_ALIAS_FLAG)
-            val rnd = Random(44)
-            repeat(18) {
-                lights.color = Color.argb(140, 255, 210, 140)
-                canvas.drawCircle(w * (0.2f + rnd.nextFloat() * 0.6f), h * (0.84f + rnd.nextFloat() * 0.08f), 1.4f, lights)
+            val random = Random(44)
+            repeat(9) {
+                lights.color = Color.argb(105, 255, 216, 152)
+                canvas.drawCircle(
+                    w * (0.24f + random.nextFloat() * 0.52f),
+                    h * (0.945f + random.nextFloat() * 0.02f),
+                    1.0f,
+                    lights,
+                )
             }
         }
     }
+
+    private fun withAlpha(color: Int, alpha: Int): Int =
+        (alpha.coerceIn(0, 255) shl 24) or (color and 0x00FFFFFF)
 }

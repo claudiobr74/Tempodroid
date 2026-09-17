@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Instant
 
 class OpenMeteoWeatherProviderTest {
     @Test
@@ -19,7 +20,8 @@ class OpenMeteoWeatherProviderTest {
     @Test
     fun mapsProviderPayloadToDomain() = runBlocking {
         val json = """
-            {"current":{"temperature_2m":27.6,"weather_code":61,"cloud_cover":90,"precipitation":1.2,"is_day":1,"time":"2026-09-17T16:40"},
+            {"timezone":"America/Sao_Paulo",
+             "current":{"temperature_2m":27.6,"weather_code":61,"cloud_cover":90,"precipitation":1.2,"is_day":1,"time":"2026-09-17T16:40"},
              "daily":{"temperature_2m_max":[28.0],"temperature_2m_min":[22.0],"precipitation_probability_max":[85]}}
         """.trimIndent()
         val provider = OpenMeteoWeatherProvider(http = { json })
@@ -27,5 +29,7 @@ class OpenMeteoWeatherProviderTest {
         assertEquals(28, data.high)
         assertEquals(WeatherCondition.RAIN, data.condition)
         assertEquals(85, data.rainChance)
+        assertEquals("America/Sao_Paulo", data.timezoneId)
+        assertEquals(Instant.parse("2026-09-17T19:40:00Z"), data.timestamp)
     }
 }
