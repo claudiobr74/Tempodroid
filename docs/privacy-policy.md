@@ -71,14 +71,14 @@ As comunicações externas utilizam HTTPS. O aplicativo bloqueia tráfego HTTP e
 
 ## Crianças
 
-O Tempodroid não foi projetado para coletar intencionalmente dados pessoais de crianças e não possui recursos sociais, publicidade personalizada ou criação de conta.
+O Tempodroid não foi projetado especificamente para crianças e não possui recursos sociais, publicidade personalizada ou criação de conta.
 
 ## Alterações desta política
 
 Esta política poderá ser atualizada quando houver mudança relevante no funcionamento do aplicativo, em fornecedores externos ou em requisitos legais e da Google Play.
 
-## Contato
+## Desenvolvedor e contato de privacidade
 
-Dúvidas, solicitações ou relatos relacionados ao Tempodroid podem ser enviados pelo repositório oficial:
+Tempodroid.
 
-https://github.com/claudiobr74/Tempodroid/issues
+**Antes da publicação:** inserir aqui o endereço público de suporte/privacidade que será mantido ativo na ficha do Google Play. O endereço não é definido no código para evitar publicar contato pessoal inadvertidamente.
