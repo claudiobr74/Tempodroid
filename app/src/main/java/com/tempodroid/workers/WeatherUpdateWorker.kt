@@ -75,7 +75,12 @@ class WeatherUpdateWorker(
         } else {
             location
         }
-        container.cache.saveLocation(effectiveLocation, appWidgetId)
+        // Atualização em background não deve marcar uma instância ainda não confirmada como configurada.
+        container.cache.saveLocation(
+            effectiveLocation,
+            appWidgetId,
+            markConfigured = false,
+        )
 
         val local = now.atZone(effectiveZone)
         val astronomy = container.astronomyRepository.getAstronomy(
