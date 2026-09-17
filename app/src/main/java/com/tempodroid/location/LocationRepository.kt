@@ -35,7 +35,7 @@ class LocationRepository(
 
         if (allowFreshDeviceLocation) {
             lastKnownCoarse()?.let { device ->
-                cache.saveLocation(device, appWidgetId)
+                cache.saveLocation(device, appWidgetId, markConfigured = false)
                 return device
             }
         }
@@ -50,7 +50,7 @@ class LocationRepository(
         }
 
         val fallback = LocationFallback.goiania
-        cache.saveLocation(fallback, appWidgetId)
+        cache.saveLocation(fallback, appWidgetId, markConfigured = false)
         return fallback
     }
 
