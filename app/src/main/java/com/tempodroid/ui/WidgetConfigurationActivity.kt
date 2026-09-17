@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -79,7 +80,6 @@ class WidgetConfigurationActivity : ComponentActivity() {
             return
         }
 
-        // O fluxo oficial de configuração deve começar cancelado. Só a confirmação muda para RESULT_OK.
         setResult(
             Activity.RESULT_CANCELED,
             Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
@@ -163,6 +163,7 @@ class WidgetConfigurationActivity : ComponentActivity() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .safeDrawingPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -229,6 +230,10 @@ class WidgetConfigurationActivity : ComponentActivity() {
                 }
             }
 
+            Text(
+                "Localização aproximada é opcional. Se você escolher usá-la, o Tempodroid acessa apenas a última localização aproximada disponível para selecionar o clima local; não há rastreamento contínuo nem localização em segundo plano.",
+                style = MaterialTheme.typography.bodySmall,
+            )
             OutlinedButton(
                 onClick = {
                     if (ContextCompat.checkSelfPermission(
