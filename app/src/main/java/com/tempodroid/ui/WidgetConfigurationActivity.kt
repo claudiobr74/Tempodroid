@@ -3,6 +3,7 @@ package com.tempodroid.ui
 import android.Manifest
 import android.app.Activity
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -51,6 +52,7 @@ import com.tempodroid.location.LocationFallback
 import com.tempodroid.location.LocationSearchResult
 import com.tempodroid.location.ResolvedLocation
 import com.tempodroid.widget.SolarWeatherWidget
+import com.tempodroid.widget.SolarWeatherWidgetReceiver
 import com.tempodroid.widget.WidgetUpdateCoordinator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -71,12 +73,13 @@ class WidgetConfigurationActivity : ComponentActivity() {
             AppWidgetManager.INVALID_APPWIDGET_ID,
         ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
 
-        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+        if (!isValidTempodroidWidget(appWidgetId)) {
             setResult(Activity.RESULT_CANCELED)
             finish()
             return
         }
 
+        // O fluxo oficial de configuração deve começar cancelado. Só a confirmação muda para RESULT_OK.
         setResult(
             Activity.RESULT_CANCELED,
             Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
@@ -89,6 +92,13 @@ class WidgetConfigurationActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun isValidTempodroidWidget(id: Int): Boolean {
+        if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return false
+        val info = AppWidgetManager.getInstance(this).getAppWidgetInfo(id) ?: return false
+        val expectedProvider = ComponentName(this, SolarWeatherWidgetReceiver::class.java)
+        return info.provider == expectedProvider
     }
 
     @androidx.compose.runtime.Composable
