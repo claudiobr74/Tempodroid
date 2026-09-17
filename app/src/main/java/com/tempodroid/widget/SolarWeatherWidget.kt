@@ -109,50 +109,61 @@ private fun SolarWeatherContent(state: SolarWeatherWidgetState) {
             modifier = GlanceModifier.fillMaxSize().padding(WidgetDimensions.PADDING_DP.dp),
         ) {
             Row(modifier = GlanceModifier.fillMaxWidth()) {
-                Column(modifier = GlanceModifier.defaultWeight().clickable(weather)) {
+                Column(modifier = GlanceModifier.clickable(weather)) {
                     Text(
                         text = WeatherCodeMapper.labelPt(state.condition, state.isDay),
                         style = TextStyle(color = secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium),
                     )
                     Text(
                         text = state.temperature?.let { "$it°" } ?: "--°",
-                        style = TextStyle(color = white, fontSize = if (compact) 28.sp else 34.sp, fontWeight = FontWeight.Bold),
+                        style = TextStyle(
+                            color = white,
+                            fontSize = if (compact) 28.sp else 34.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AndroidRemoteViews(
-                            remoteViews = RemoteViews(context.packageName, R.layout.widget_text_clock),
-                        )
-                        if (!compact) {
-                            Spacer(GlanceModifier.width(8.dp))
-                            Text(
-                                text = state.displayDate,
-                                style = TextStyle(color = secondary, fontSize = 12.sp),
-                            )
-                        }
-                    }
+                }
+
+                Spacer(GlanceModifier.defaultWeight())
+
+                Column {
+                    AndroidRemoteViews(
+                        remoteViews = RemoteViews(context.packageName, R.layout.widget_text_clock),
+                    )
                     if (!compact) {
+                        Text(
+                            text = state.displayDate,
+                            style = TextStyle(color = secondary, fontSize = 11.sp),
+                        )
                         Text(
                             text = "◉  ${state.city}",
                             style = TextStyle(color = secondary, fontSize = 11.sp),
                         )
                     }
                 }
-                if (bitmaps.mode == WidgetLayoutMode.EXPANDED) {
-                    Spacer(GlanceModifier.width(8.dp))
-                }
             }
+
             Spacer(GlanceModifier.defaultWeight())
+
             Image(
                 provider = ImageProvider(bitmaps.timeline),
                 contentDescription = "Linha do tempo solar e lunar",
                 contentScale = ContentScale.FillBounds,
-                modifier = GlanceModifier.fillMaxWidth().height(if (compact) 40.dp else 52.dp),
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .height(if (compact) 38.dp else WidgetDimensions.TIMELINE_HEIGHT_DP.dp),
             )
-            Spacer(GlanceModifier.height(6.dp))
+            Spacer(GlanceModifier.height(4.dp))
+
             val summary = if (compact) {
                 DailySummaryFormatter.compact(state.high, state.low, state.rainChance)
             } else {
                 DailySummaryFormatter.normal(state.high, state.low, state.rainChance)
+            }
+            val statusSuffix = when {
+                state.hasWeatherError -> "  ·  offline"
+                state.isStale -> "  ·  desatualizado"
+                else -> ""
             }
             Box(
                 modifier = GlanceModifier
@@ -161,16 +172,16 @@ private fun SolarWeatherContent(state: SolarWeatherWidgetState) {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = if (state.hasWeatherError) "$summary  ·  offline" else summary,
+                    text = summary + statusSuffix,
                     style = TextStyle(
                         color = white,
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
                     ),
                     modifier = GlanceModifier
                         .background(ColorProvider(Color(WidgetTheme.SUMMARY_FILL)))
                         .cornerRadius(50.dp)
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                        .padding(horizontal = 10.dp, vertical = 3.dp),
                 )
             }
         }

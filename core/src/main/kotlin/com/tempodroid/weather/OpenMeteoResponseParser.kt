@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneOffset
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 @Serializable
@@ -64,11 +64,14 @@ object OpenMeteoResponseParser {
 
     private fun parseInstant(value: String, timezoneId: String?): Instant? {
         return try {
-            if (value.endsWith("Z")) Instant.parse(value)
-            else {
-                val ldt = LocalDateTime.parse(value)
-                val offset = ZoneOffset.UTC
-                ldt.toInstant(offset)
+            if (value.endsWith("Z")) {
+                Instant.parse(value)
+            } else {
+                val localDateTime = LocalDateTime.parse(value)
+                val zone = timezoneId
+                    ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
+                    ?: ZoneId.of("UTC")
+                localDateTime.atZone(zone).toInstant()
             }
         } catch (_: Exception) {
             null
