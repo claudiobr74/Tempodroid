@@ -1,0 +1,1 @@
+Relógio, clima e ciclo Sol/Lua em um widget 4×2 moderno e personalizável.

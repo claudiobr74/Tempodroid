@@ -21,3 +21,8 @@ out/
 app/release/
 *.log
 .cxx/
+*.jks
+*.keystore
+keystore.properties
+.env
+.env.*

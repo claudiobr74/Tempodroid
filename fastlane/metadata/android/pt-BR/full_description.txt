@@ -1,0 +1,30 @@
+Tempodroid transforma a tela inicial do Android em uma visão rápida do tempo, do horário e do ciclo do dia.
+
+O widget oficial 4×2 combina relógio, temperatura, condição do tempo, máxima e mínima, chance de chuva e uma linha do tempo visual com nascer do Sol, pôr do Sol, Sol e Lua.
+
+O fundo muda de acordo com o horário e as condições meteorológicas, criando um céu dinâmico que acompanha manhã, tarde, entardecer, noite, nuvens e chuva.
+
+A Lua também acompanha a fase lunar calculada para o dia, com representação coerente no céu e na linha do tempo.
+
+Principais recursos:
+• widget Android 4×2 responsivo;
+• relógio e data;
+• clima atual;
+• temperatura máxima e mínima;
+• chance de chuva;
+• nascer e pôr do Sol;
+• fase e iluminação da Lua;
+• linha do tempo Sol/Lua;
+• múltiplos widgets com cidades diferentes;
+• busca manual de cidade;
+• localização aproximada opcional;
+• funcionamento com último clima válido quando a internet estiver indisponível.
+
+Privacidade por padrão:
+• sem conta ou login;
+• sem anúncios na versão 1.0.0;
+• sem analytics;
+• sem localização precisa;
+• sem rastreamento em segundo plano.
+
+Dados meteorológicos fornecidos por Open-Meteo. Busca de localidades via Open-Meteo, com dados baseados em GeoNames.

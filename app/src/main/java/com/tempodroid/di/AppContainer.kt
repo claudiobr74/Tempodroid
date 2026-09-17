@@ -1,6 +1,7 @@
 package com.tempodroid.di
 
 import android.content.Context
+import com.tempodroid.BuildConfig
 import com.tempodroid.astronomy.AstronomyCalculator
 import com.tempodroid.astronomy.AstronomyRepositoryImpl
 import com.tempodroid.data.PreferencesRepository
@@ -25,11 +26,15 @@ class AppContainer(context: Context) {
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .callTimeout(20, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 
     val http = HttpGetter { url ->
         withContext(Dispatchers.IO) {
-            val request = Request.Builder().url(url).header("User-Agent", "Tempodroid/1.0").build()
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "Tempodroid/${BuildConfig.VERSION_NAME} (Android)")
+                .build()
             okHttp.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) error("HTTP ${response.code}")
                 response.body?.string().orEmpty()

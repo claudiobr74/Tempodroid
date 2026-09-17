@@ -8,13 +8,19 @@
 
     <application
         android:name=".TempodroidApp"
-        android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Tempodroid"
         android:usesCleartextTraffic="false">
+
+        <activity
+            android:name=".ui.PrivacyPolicyActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Tempodroid" />
 
         <activity
             android:name=".ui.WidgetConfigurationActivity"
@@ -33,14 +39,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="tempodroid" android:host="home" />
-                <data android:scheme="tempodroid" android:host="weather" />
-                <data android:scheme="tempodroid" android:host="forecast" />
-            </intent-filter>
         </activity>
 
         <receiver
@@ -57,8 +55,7 @@
 
         <receiver
             android:name=".widget.WidgetBootReceiver"
-            android:exported="true"
-            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
