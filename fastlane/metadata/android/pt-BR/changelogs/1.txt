@@ -1,0 +1,9 @@
+Primeira versão do Tempodroid.
+
+• Widget 4×2 com relógio e clima.
+• Céu dinâmico conforme horário e condição meteorológica.
+• Linha do tempo com nascer/pôr do Sol e Lua.
+• Fases da Lua e iluminação lunar.
+• Cidade manual ou localização aproximada opcional.
+• Múltiplos widgets com configurações independentes.
+• Cache para manter o widget útil offline.
