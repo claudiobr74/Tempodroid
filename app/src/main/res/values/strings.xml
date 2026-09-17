@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Tempodroid</string>
+    <string name="widget_name">SolarWeatherWidget</string>
+    <string name="widget_description">Relógio, clima e linha do tempo Sol/Lua</string>
+    <string name="widget_preview_condition">Limpo</string>
+    <string name="widget_preview_temp">33°</string>
+</resources>

@@ -1,0 +1,96 @@
+package com.tempodroid.astronomy
+
+import com.tempodroid.sky.DayPeriod
+import com.tempodroid.sky.DayPeriodCalculator
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+
+class AstronomyCalculatorTest {
+
+    private val calculator = AstronomyCalculator()
+    private val zone = ZoneId.of("America/Sao_Paulo")
+    private val goianiaLat = -16.6869
+    private val goianiaLon = -49.2648
+    private val date = LocalDate.of(2026, 9, 17)
+
+    @Test
+    fun sunriseSunsetAroundEquinoxInGoiania() {
+        val solar = calculator.solarTimes(goianiaLat, goianiaLon, date, zone)
+        assertTrue("sunrise=${solar.sunrise}", solar.sunrise.hour in 5..7)
+        assertTrue("sunset=${solar.sunset}", solar.sunset.hour in 17..19)
+        assertTrue(solar.sunrise.isBefore(solar.solarNoon))
+        assertTrue(solar.solarNoon.isBefore(solar.sunset))
+    }
+
+    @Test
+    fun timezoneShiftsLocalSolarTimes() {
+        val utc = calculator.solarTimes(goianiaLat, goianiaLon, date, ZoneId.of("UTC"))
+        val sp = calculator.solarTimes(goianiaLat, goianiaLon, date, zone)
+        val deltaHours = kotlin.math.abs(sp.solarNoon.hour - utc.solarNoon.hour)
+        assertTrue("delta=$deltaHours noonSP=${sp.solarNoon} noonUTC=${utc.solarNoon}", deltaHours in 2..4)
+    }
+
+    @Test
+    fun sunBelowHorizonBeforeSunriseAndAfterSunset() {
+        val solar = calculator.solarTimes(goianiaLat, goianiaLon, date, zone)
+        val before = SunPositionCalculator.position(solar.sunrise.minusMinutes(20), solar.sunrise, solar.sunset, solar.solarNoon)
+        val after = SunPositionCalculator.position(solar.sunset.plusMinutes(20), solar.sunrise, solar.sunset, solar.solarNoon)
+        val noon = SunPositionCalculator.position(solar.solarNoon, solar.sunrise, solar.sunset, solar.solarNoon)
+        assertFalse(before.aboveHorizon)
+        assertFalse(after.aboveHorizon)
+        assertTrue(noon.aboveHorizon)
+        assertTrue(noon.normalizedY < before.normalizedY)
+    }
+
+    @Test
+    fun sunRisesThenPeaksThenSets() {
+        val sunrise = LocalTime.of(6, 10)
+        val noon = LocalTime.of(12, 8)
+        val sunset = LocalTime.of(18, 5)
+        val morning = SunPositionCalculator.position(LocalTime.of(8, 0), sunrise, sunset, noon)
+        val peak = SunPositionCalculator.position(noon, sunrise, sunset, noon)
+        val afternoon = SunPositionCalculator.position(LocalTime.of(16, 0), sunrise, sunset, noon)
+        assertTrue(morning.aboveHorizon && peak.aboveHorizon && afternoon.aboveHorizon)
+        assertTrue(peak.normalizedY < morning.normalizedY)
+        assertTrue(peak.normalizedY < afternoon.normalizedY)
+        assertTrue(morning.normalizedX < peak.normalizedX)
+        assertTrue(peak.normalizedX < afternoon.normalizedX)
+    }
+
+    @Test
+    fun moonHiddenWhenBelowHorizon() {
+        val rise = LocalTime.of(20, 0)
+        val set = LocalTime.of(8, 0)
+        val day = CelestialPositionCalculator.alongArc(LocalTime.of(15, 0), rise, set)
+        val night = CelestialPositionCalculator.alongArc(LocalTime.of(23, 0), rise, set)
+        assertFalse(day.aboveHorizon)
+        assertTrue(night.aboveHorizon)
+    }
+
+    @Test
+    fun computeReturnsConsistentHemisphereAndPhase() {
+        val data = calculator.compute(goianiaLat, goianiaLon, date, zone, LocalTime.of(21, 45))
+        assertEquals(Hemisphere.SOUTH, data.hemisphere)
+        assertTrue(data.moonIllumination in 0.0..1.0)
+        assertTrue(data.sunrise.isBefore(data.sunset))
+    }
+
+    @Test
+    fun dayPeriodUsesRealSunriseSunset() {
+        val sunrise = LocalTime.of(6, 10)
+        val sunset = LocalTime.of(18, 5)
+        val noon = LocalTime.of(12, 8)
+        assertEquals(DayPeriod.DAWN, DayPeriodCalculator.from(LocalTime.of(5, 50), sunrise, sunset, noon))
+        assertEquals(DayPeriod.MORNING, DayPeriodCalculator.from(LocalTime.of(7, 0), sunrise, sunset, noon))
+        assertEquals(DayPeriod.DAY, DayPeriodCalculator.from(LocalTime.of(10, 0), sunrise, sunset, noon))
+        assertEquals(DayPeriod.AFTERNOON, DayPeriodCalculator.from(LocalTime.of(15, 30), sunrise, sunset, noon))
+        assertEquals(DayPeriod.SUNSET, DayPeriodCalculator.from(LocalTime.of(17, 40), sunrise, sunset, noon))
+        assertEquals(DayPeriod.TWILIGHT, DayPeriodCalculator.from(LocalTime.of(18, 20), sunrise, sunset, noon))
+        assertEquals(DayPeriod.NIGHT, DayPeriodCalculator.from(LocalTime.of(21, 45), sunrise, sunset, noon))
+    }
+}

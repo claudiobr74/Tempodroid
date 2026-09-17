@@ -1,0 +1,77 @@
+package com.tempodroid.weather
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import kotlin.math.roundToInt
+
+@Serializable
+data class OpenMeteoResponse(
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val timezone: String? = null,
+    val current: Current? = null,
+    val daily: Daily? = null,
+) {
+    @Serializable
+    data class Current(
+        val time: String? = null,
+        @SerialName("temperature_2m") val temperature: Double? = null,
+        @SerialName("weather_code") val weatherCode: Int? = null,
+        @SerialName("cloud_cover") val cloudCover: Int? = null,
+        val precipitation: Double? = null,
+        @SerialName("is_day") val isDay: Int? = null,
+    )
+
+    @Serializable
+    data class Daily(
+        @SerialName("temperature_2m_max") val temperatureMax: List<Double?>? = null,
+        @SerialName("temperature_2m_min") val temperatureMin: List<Double?>? = null,
+        @SerialName("precipitation_probability_max") val rainChance: List<Int?>? = null,
+        val sunrise: List<String?>? = null,
+        val sunset: List<String?>? = null,
+    )
+}
+
+object OpenMeteoResponseParser {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
+    fun parse(body: String): WeatherData {
+        val response = json.decodeFromString(OpenMeteoResponse.serializer(), body)
+        val current = response.current
+        val code = current?.weatherCode ?: 0
+        val timestamp = current?.time?.let { parseInstant(it, response.timezone) }
+        return WeatherData(
+            temperature = current?.temperature?.roundToInt(),
+            condition = WeatherCodeMapper.fromOpenMeteo(code),
+            high = response.daily?.temperatureMax?.firstOrNull()?.roundToInt(),
+            low = response.daily?.temperatureMin?.firstOrNull()?.roundToInt(),
+            rainChance = response.daily?.rainChance?.firstOrNull(),
+            cloudCover = current?.cloudCover,
+            precipitation = current?.precipitation,
+            weatherCode = code,
+            isDay = (current?.isDay ?: 1) == 1,
+            timestamp = timestamp,
+            timezoneId = response.timezone,
+        )
+    }
+
+    private fun parseInstant(value: String, timezoneId: String?): Instant? {
+        return try {
+            if (value.endsWith("Z")) Instant.parse(value)
+            else {
+                val ldt = LocalDateTime.parse(value)
+                val offset = ZoneOffset.UTC
+                ldt.toInstant(offset)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
