@@ -2,7 +2,6 @@ package com.tempodroid.timeline
 
 import com.tempodroid.astronomy.CelestialPosition
 import com.tempodroid.astronomy.MoonPhase
-import com.tempodroid.astronomy.minutesOf
 import java.time.LocalTime
 
 data class TimelineModels(
@@ -40,10 +39,13 @@ object TimelineCalculator {
         solarNoonPosition = timeToNormalizedPosition(solarNoon ?: LocalTime.NOON),
         moonrisePosition = moonrise?.let { timeToNormalizedPosition(it) },
         moonsetPosition = moonset?.let { timeToNormalizedPosition(it) },
-        nowLabel = "%02d:%02d".format(now.hour, now.minute),
+        nowLabel = formatClock(now),
         sunrise = sunrise,
         sunset = sunset,
     )
+
+    fun formatClock(time: LocalTime): String =
+        "%02d:%02d".format(time.hour, time.minute)
 }
 
 data class TimelineMarker(
@@ -53,24 +55,23 @@ data class TimelineMarker(
 )
 
 object TimelineLabels {
+    /**
+     * A timeline refinada possui apenas as duas âncoras astronômicas fixas.
+     * O terceiro marcador ("agora") é dinâmico e renderizado separadamente na
+     * sua posição cronológica real.
+     */
     fun defaultMarkers(sunrise: LocalTime, sunset: LocalTime): List<TimelineMarker> = listOf(
-        TimelineMarker(0f, "Madrugada", "00:00"),
         TimelineMarker(
             TimelineCalculator.timeToNormalizedPosition(sunrise),
             "Nascer do sol",
-            formatClock(sunrise),
+            TimelineCalculator.formatClock(sunrise),
         ),
-        TimelineMarker(0.5f, "Dia", "12:00"),
         TimelineMarker(
             TimelineCalculator.timeToNormalizedPosition(sunset),
             "Pôr do sol",
-            formatClock(sunset),
+            TimelineCalculator.formatClock(sunset),
         ),
-        TimelineMarker(1f, "Noite", "24:00"),
     )
-
-    private fun formatClock(time: LocalTime): String =
-        "%02d:%02d".format(time.hour, time.minute)
 }
 
 data class TimelineRenderInput(
