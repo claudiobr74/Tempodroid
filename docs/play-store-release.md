@@ -2,7 +2,7 @@
 
 ## Package e versão inicial
 
-- `applicationId`: `com.tempodroid`
+- `applicationId`: `com.tempodroid.myapp`
 - versão: `1.0.0`
 - `versionCode`: `1`
 - `minSdk`: 26
@@ -10,6 +10,8 @@
 - formato oficial do widget: 4×2
 
 O `applicationId` deve ser tratado como definitivo após o primeiro envio ao Google Play.
+
+> Observação: o `namespace` Kotlin permanece `com.tempodroid` por decisão arquitetural. O identificador público/Play Store é `com.tempodroid.myapp`; não é necessário renomear os pacotes-fonte para que o bundle pertença a esse app.
 
 ## Build local de validação
 
