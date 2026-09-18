@@ -1,5 +1,7 @@
 package com.tempodroid.sky
 
+import android.graphics.Bitmap
+import android.graphics.Color
 import com.tempodroid.astronomy.Hemisphere
 import com.tempodroid.astronomy.MoonOrientation
 import com.tempodroid.astronomy.MoonPhase
@@ -134,6 +136,33 @@ class MoonRendererAndroidTest {
             assertTrue(bitmap.byteCount > 0)
             bitmap.recycle()
         }
+    }
+
+    @Test
+    fun adaptiveProtectionIsStrongerOnBrightSky() {
+        val dark = Bitmap.createBitmap(320, 160, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.rgb(8, 18, 36))
+        }
+        val bright = Bitmap.createBitmap(320, 160, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.rgb(238, 244, 250))
+        }
+
+        val darkAlpha = TextProtectionOverlay.timelineGlassAlpha(dark)
+        val brightAlpha = TextProtectionOverlay.timelineGlassAlpha(bright)
+
+        assertTrue(brightAlpha > darkAlpha)
+        assertTrue(darkAlpha in 40..55)
+        assertTrue(brightAlpha in 80..90)
+        dark.recycle()
+        bright.recycle()
+    }
+
+    @Test
+    fun adaptiveAlphaStaysInsideDesignedRange() {
+        val dark = TextProtectionOverlay.adaptiveAlpha(0.0, minAlpha = 0.06f, maxAlpha = 0.40f)
+        val bright = TextProtectionOverlay.adaptiveAlpha(1.0, minAlpha = 0.06f, maxAlpha = 0.40f)
+        assertEquals(0.06f, dark, 0.001f)
+        assertEquals(0.40f, bright, 0.001f)
     }
 
     @Test
