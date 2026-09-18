@@ -72,7 +72,6 @@ object FigmaVisualStateResolver {
     fun background(period: DayPeriod, condition: WeatherCondition): FigmaSkyState {
         val weather = canonicalWeather(condition)
         return when (period) {
-            // O Figma usa Sunrise como estado atmosférico específico do amanhecer.
             DayPeriod.DAWN -> when (weather) {
                 FigmaWeatherState.CLEAR, FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.SUNRISE
                 FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY
@@ -80,14 +79,53 @@ object FigmaVisualStateResolver {
                 FigmaWeatherState.STORM -> FigmaSkyState.STORM
             }
 
-            // Morning faz parte da família DAY da matriz MoonWeatherSky.
             DayPeriod.MORNING, DayPeriod.DAY, DayPeriod.AFTERNOON -> dayBackground(weather)
-
-            // Sunset é a versão especializada da transição twilight para céu aberto.
             DayPeriod.SUNSET, DayPeriod.TWILIGHT -> twilightBackground(weather)
-
             DayPeriod.NIGHT -> nightBackground(weather)
         }
+    }
+
+    /**
+     * Opacidades lidas diretamente das 120 variantes MoonWeatherSky.
+     * Abaixo do horizonte o chamador ainda deve ocultar completamente a Lua.
+     */
+    fun moonOpacity(period: DayPeriod, condition: WeatherCondition): Float {
+        val weather = canonicalWeather(condition)
+        return when (matrixPeriod(period)) {
+            FigmaMatrixPeriod.DAY -> when (weather) {
+                FigmaWeatherState.CLEAR -> 0.34f
+                FigmaWeatherState.PARTLY_CLOUDY -> 0.26f
+                FigmaWeatherState.CLOUDY -> 0.14f
+                FigmaWeatherState.RAIN -> 0.07f
+                FigmaWeatherState.STORM -> 0.00f
+            }
+
+            FigmaMatrixPeriod.TWILIGHT -> when (weather) {
+                FigmaWeatherState.CLEAR -> 0.70f
+                FigmaWeatherState.PARTLY_CLOUDY -> 0.55f
+                FigmaWeatherState.CLOUDY -> 0.28f
+                FigmaWeatherState.RAIN -> 0.12f
+                FigmaWeatherState.STORM -> 0.02f
+            }
+
+            FigmaMatrixPeriod.NIGHT -> when (weather) {
+                FigmaWeatherState.CLEAR -> 1.00f
+                FigmaWeatherState.PARTLY_CLOUDY -> 0.82f
+                FigmaWeatherState.CLOUDY -> 0.42f
+                FigmaWeatherState.RAIN -> 0.18f
+                FigmaWeatherState.STORM -> 0.04f
+            }
+        }
+    }
+
+    /**
+     * Tamanho da instância MoonVisual em relação à altura de referência 160px:
+     * DAY 48px, TWILIGHT 58px e NIGHT 66px.
+     */
+    fun moonComponentSizeFraction(period: DayPeriod): Float = when (matrixPeriod(period)) {
+        FigmaMatrixPeriod.DAY -> 48f / 160f
+        FigmaMatrixPeriod.TWILIGHT -> 58f / 160f
+        FigmaMatrixPeriod.NIGHT -> 66f / 160f
     }
 
     private fun dayBackground(weather: FigmaWeatherState): FigmaSkyState = when (weather) {
@@ -98,7 +136,6 @@ object FigmaVisualStateResolver {
         FigmaWeatherState.STORM -> FigmaSkyState.STORM
     }
 
-    /** Mapeamento extraído diretamente das 40 variantes twilight do Figma. */
     private fun twilightBackground(weather: FigmaWeatherState): FigmaSkyState = when (weather) {
         FigmaWeatherState.CLEAR, FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.SUNSET
         FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY_NIGHT
@@ -106,7 +143,6 @@ object FigmaVisualStateResolver {
         FigmaWeatherState.STORM -> FigmaSkyState.STORM
     }
 
-    /** Mapeamento extraído diretamente das 40 variantes night do Figma. */
     private fun nightBackground(weather: FigmaWeatherState): FigmaSkyState = when (weather) {
         FigmaWeatherState.CLEAR -> FigmaSkyState.CLEAR_NIGHT
         FigmaWeatherState.PARTLY_CLOUDY, FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY_NIGHT
