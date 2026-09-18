@@ -282,7 +282,7 @@ class WidgetRefinementPreviewTest {
     }
 
     private fun previewDirectory(): File {
-        val cwd = File(System.getProperty("user.dir"))
+        val cwd = File(System.getProperty("user.dir") ?: ".")
         val appDir = if (cwd.name == "app") cwd else File(cwd, "app")
         return File(appDir, "build/reports/timeline-moon-previews")
     }
