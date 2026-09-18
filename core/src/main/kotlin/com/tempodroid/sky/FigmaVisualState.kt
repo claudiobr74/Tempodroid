@@ -40,9 +40,8 @@ data class FigmaMoonWeatherVariant(
  * Fonte de verdade para traduzir o estado meteorológico/astronômico do app
  * para a arquitetura visual do arquivo final do Figma.
  *
- * O componente MoonWeatherSky do Figma possui 5 condições × 3 períodos ×
- * 8 fases lunares = 120 variantes. Os dez fundos DynamicSkyBackground são
- * compartilhados entre essas variantes.
+ * MoonWeatherSky possui 5 condições × 3 períodos × 8 fases lunares = 120
+ * variantes. DynamicSkyBackground possui dez rasters compartilhados.
  */
 object FigmaVisualStateResolver {
 
@@ -73,29 +72,21 @@ object FigmaVisualStateResolver {
     fun background(period: DayPeriod, condition: WeatherCondition): FigmaSkyState {
         val weather = canonicalWeather(condition)
         return when (period) {
-            DayPeriod.DAWN, DayPeriod.MORNING -> when (weather) {
+            // O Figma usa Sunrise como estado atmosférico específico do amanhecer.
+            DayPeriod.DAWN -> when (weather) {
                 FigmaWeatherState.CLEAR, FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.SUNRISE
                 FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY
                 FigmaWeatherState.RAIN -> FigmaSkyState.RAIN
                 FigmaWeatherState.STORM -> FigmaSkyState.STORM
             }
 
-            DayPeriod.SUNSET -> when (weather) {
-                FigmaWeatherState.CLEAR, FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.SUNSET
-                FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY
-                FigmaWeatherState.RAIN -> FigmaSkyState.RAIN
-                FigmaWeatherState.STORM -> FigmaSkyState.STORM
-            }
+            // Morning faz parte da família DAY da matriz MoonWeatherSky.
+            DayPeriod.MORNING, DayPeriod.DAY, DayPeriod.AFTERNOON -> dayBackground(weather)
 
-            DayPeriod.TWILIGHT -> when (weather) {
-                FigmaWeatherState.CLEAR -> FigmaSkyState.SUNSET
-                FigmaWeatherState.PARTLY_CLOUDY, FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY_NIGHT
-                FigmaWeatherState.RAIN -> FigmaSkyState.RAIN_NIGHT
-                FigmaWeatherState.STORM -> FigmaSkyState.STORM
-            }
+            // Sunset é a versão especializada da transição twilight para céu aberto.
+            DayPeriod.SUNSET, DayPeriod.TWILIGHT -> twilightBackground(weather)
 
             DayPeriod.NIGHT -> nightBackground(weather)
-            DayPeriod.DAY, DayPeriod.AFTERNOON -> dayBackground(weather)
         }
     }
 
@@ -107,6 +98,15 @@ object FigmaVisualStateResolver {
         FigmaWeatherState.STORM -> FigmaSkyState.STORM
     }
 
+    /** Mapeamento extraído diretamente das 40 variantes twilight do Figma. */
+    private fun twilightBackground(weather: FigmaWeatherState): FigmaSkyState = when (weather) {
+        FigmaWeatherState.CLEAR, FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.SUNSET
+        FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY_NIGHT
+        FigmaWeatherState.RAIN -> FigmaSkyState.RAIN_NIGHT
+        FigmaWeatherState.STORM -> FigmaSkyState.STORM
+    }
+
+    /** Mapeamento extraído diretamente das 40 variantes night do Figma. */
     private fun nightBackground(weather: FigmaWeatherState): FigmaSkyState = when (weather) {
         FigmaWeatherState.CLEAR -> FigmaSkyState.CLEAR_NIGHT
         FigmaWeatherState.PARTLY_CLOUDY, FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY_NIGHT
