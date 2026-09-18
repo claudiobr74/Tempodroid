@@ -7,7 +7,6 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.Shader
-import com.tempodroid.astronomy.MoonPhaseCalculator
 import com.tempodroid.astronomy.MoonRenderStyle
 import com.tempodroid.astronomy.hemisphereFromLatitude
 import com.tempodroid.sky.MoonRenderer
@@ -24,6 +23,7 @@ object SolarLunarTimelineRenderer {
         state: SolarWeatherWidgetState,
         now: LocalTime,
         compact: Boolean,
+        moonSurface: Bitmap? = null,
     ): Bitmap {
         val w = widthPx.coerceAtLeast(120)
         val h = heightPx.coerceAtLeast(48)
@@ -57,6 +57,7 @@ object SolarLunarTimelineRenderer {
                         illumination = state.moonIllumination,
                         hemisphere = hemisphereFromLatitude(state.latitude),
                         style = MoonRenderStyle.TIMELINE,
+                        surfaceTexture = moonSurface,
                     )
                     canvas.drawBitmap(moon, x - moon.width / 2f, iconY - moon.height / 2f, null)
                     moon.recycle()
