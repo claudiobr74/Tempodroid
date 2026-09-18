@@ -47,7 +47,6 @@ jobs:
         with:
           name: timeline-moon-previews
           path: app/build/reports/timeline-moon-previews/*.png
-          archive: false
           if-no-files-found: error
           retention-days: 14
 
