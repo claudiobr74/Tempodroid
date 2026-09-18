@@ -12,9 +12,7 @@ class FigmaVisualStateResolverTest {
         val variants = mutableSetOf<Triple<FigmaWeatherState, FigmaMatrixPeriod, MoonPhase>>()
         FigmaWeatherState.values().forEach { weather ->
             FigmaMatrixPeriod.values().forEach { period ->
-                MoonPhase.values().forEach { phase ->
-                    variants += Triple(weather, period, phase)
-                }
+                MoonPhase.values().forEach { phase -> variants += Triple(weather, period, phase) }
             }
         }
         assertEquals(120, variants.size)
@@ -51,6 +49,32 @@ class FigmaVisualStateResolverTest {
         assertEquals(FigmaSkyState.CLOUDY_NIGHT, FigmaVisualStateResolver.background(DayPeriod.NIGHT, WeatherCondition.CLOUDY))
         assertEquals(FigmaSkyState.RAIN_NIGHT, FigmaVisualStateResolver.background(DayPeriod.NIGHT, WeatherCondition.RAIN))
         assertEquals(FigmaSkyState.STORM, FigmaVisualStateResolver.background(DayPeriod.NIGHT, WeatherCondition.STORM))
+    }
+
+    @Test
+    fun `opacidades lunares reproduzem a matriz Figma`() {
+        assertEquals(0.34f, FigmaVisualStateResolver.moonOpacity(DayPeriod.DAY, WeatherCondition.CLEAR), 0f)
+        assertEquals(0.26f, FigmaVisualStateResolver.moonOpacity(DayPeriod.DAY, WeatherCondition.PARTLY_CLOUDY), 0f)
+        assertEquals(0.14f, FigmaVisualStateResolver.moonOpacity(DayPeriod.DAY, WeatherCondition.CLOUDY), 0f)
+        assertEquals(0.07f, FigmaVisualStateResolver.moonOpacity(DayPeriod.DAY, WeatherCondition.RAIN), 0f)
+        assertEquals(0.00f, FigmaVisualStateResolver.moonOpacity(DayPeriod.DAY, WeatherCondition.STORM), 0f)
+        assertEquals(0.70f, FigmaVisualStateResolver.moonOpacity(DayPeriod.TWILIGHT, WeatherCondition.CLEAR), 0f)
+        assertEquals(0.55f, FigmaVisualStateResolver.moonOpacity(DayPeriod.TWILIGHT, WeatherCondition.PARTLY_CLOUDY), 0f)
+        assertEquals(0.28f, FigmaVisualStateResolver.moonOpacity(DayPeriod.TWILIGHT, WeatherCondition.CLOUDY), 0f)
+        assertEquals(0.12f, FigmaVisualStateResolver.moonOpacity(DayPeriod.TWILIGHT, WeatherCondition.RAIN), 0f)
+        assertEquals(0.02f, FigmaVisualStateResolver.moonOpacity(DayPeriod.TWILIGHT, WeatherCondition.STORM), 0f)
+        assertEquals(1.00f, FigmaVisualStateResolver.moonOpacity(DayPeriod.NIGHT, WeatherCondition.CLEAR), 0f)
+        assertEquals(0.82f, FigmaVisualStateResolver.moonOpacity(DayPeriod.NIGHT, WeatherCondition.PARTLY_CLOUDY), 0f)
+        assertEquals(0.42f, FigmaVisualStateResolver.moonOpacity(DayPeriod.NIGHT, WeatherCondition.CLOUDY), 0f)
+        assertEquals(0.18f, FigmaVisualStateResolver.moonOpacity(DayPeriod.NIGHT, WeatherCondition.RAIN), 0f)
+        assertEquals(0.04f, FigmaVisualStateResolver.moonOpacity(DayPeriod.NIGHT, WeatherCondition.STORM), 0f)
+    }
+
+    @Test
+    fun `escala lunar reproduz 48 58 e 66 sobre frame 160`() {
+        assertEquals(48f / 160f, FigmaVisualStateResolver.moonComponentSizeFraction(DayPeriod.DAY), 0f)
+        assertEquals(58f / 160f, FigmaVisualStateResolver.moonComponentSizeFraction(DayPeriod.TWILIGHT), 0f)
+        assertEquals(66f / 160f, FigmaVisualStateResolver.moonComponentSizeFraction(DayPeriod.NIGHT), 0f)
     }
 
     @Test
