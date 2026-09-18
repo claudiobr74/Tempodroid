@@ -36,7 +36,7 @@ jobs:
 
       - name: Build signed release bundle
         env:
-          TEMPODROID_VERSION_CODE: "2"
+          TEMPODROID_VERSION_CODE: "3"
           TEMPODROID_VERSION_NAME: "1.1.0"
           TEMPODROID_KEYSTORE_PATH: ${{ runner.temp }}/tempodroid-upload.jks
           TEMPODROID_KEYSTORE_PASSWORD: ${{ secrets.TEMPODROID_KEYSTORE_PASSWORD }}
@@ -45,13 +45,13 @@ jobs:
         run: ./gradlew :core:test :app:test :app:lintRelease :app:bundleRelease --stacktrace
 
       - name: Rename release bundle
-        run: cp app/build/outputs/bundle/release/app-release.aab app/build/outputs/bundle/release/tempodroid-1.1.0-2.aab
+        run: cp app/build/outputs/bundle/release/app-release.aab app/build/outputs/bundle/release/tempodroid-1.1.0-3.aab
 
       - name: Upload signed AAB
         uses: actions/upload-artifact@v7
         with:
-          name: tempodroid-1.1.0-2-aab
-          path: app/build/outputs/bundle/release/tempodroid-1.1.0-2.aab
+          name: tempodroid-1.1.0-3-aab
+          path: app/build/outputs/bundle/release/tempodroid-1.1.0-3.aab
           archive: false
           if-no-files-found: error
           retention-days: 30
@@ -59,7 +59,7 @@ jobs:
       - name: Preserve production R8 mapping
         uses: actions/upload-artifact@v7
         with:
-          name: r8-mapping-1.1.0-2
+          name: r8-mapping-1.1.0-3
           path: app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
           retention-days: 90
