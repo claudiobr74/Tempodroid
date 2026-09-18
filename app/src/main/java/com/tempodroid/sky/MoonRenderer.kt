@@ -22,6 +22,9 @@ import kotlin.math.abs
  * Quando [surfaceTexture] é fornecida, a superfície iluminada usa exatamente
  * a textura raster do componente MoonVisual do Figma. A mesma máscara
  * astronômica continua determinando fase, orientação e hemisfério.
+ *
+ * A integração atmosférica evita qualquer "backplate" opaco: o earthshine e
+ * o halo sempre respeitam [visibility] e permanecem sutis.
  */
 object MoonRenderer {
 
@@ -72,21 +75,22 @@ object MoonRenderer {
         val discBounds = RectF(cx - radius, cy - radius, cx + radius, cy + radius)
 
         if (isSky && haloBoost > 0.2f && visibility > 0.4f) {
+            val haloRadius = radius * (1.70f + 0.45f * haloBoost)
             val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 shader = RadialGradient(
                     cx,
                     cy,
-                    radius * (2.4f + haloBoost),
+                    haloRadius,
                     intArrayOf(
-                        Color.argb((70 * visibility * haloBoost).toInt(), 210, 220, 255),
-                        Color.argb((28 * visibility * haloBoost).toInt(), 180, 200, 255),
+                        Color.argb((36 * visibility * haloBoost).toInt(), 218, 228, 255),
+                        Color.argb((14 * visibility * haloBoost).toInt(), 180, 204, 255),
                         Color.TRANSPARENT,
                     ),
-                    floatArrayOf(0f, 0.45f, 1f),
+                    floatArrayOf(0f, 0.48f, 1f),
                     Shader.TileMode.CLAMP,
                 )
             }
-            canvas.drawCircle(cx, cy, radius * (2.4f + haloBoost), haloPaint)
+            canvas.drawCircle(cx, cy, haloRadius, haloPaint)
         }
 
         drawEarthshine(
@@ -137,32 +141,49 @@ object MoonRenderer {
         isSky: Boolean,
         surfaceTexture: Bitmap?,
     ) {
+        val disc = Path().apply { addCircle(cx, cy, radius, Path.Direction.CW) }
+        canvas.save()
+        canvas.clipPath(disc)
+
         if (surfaceTexture != null && !surfaceTexture.isRecycled) {
-            val disc = Path().apply { addCircle(cx, cy, radius, Path.Direction.CW) }
-            canvas.save()
-            canvas.clipPath(disc)
             val texturePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-                alpha = ((if (isSky) 82 else 96) * visibility).toInt().coerceIn(0, 120)
+                alpha = ((if (isSky) 30 else 46) * visibility).toInt().coerceIn(0, 64)
             }
             canvas.drawBitmap(surfaceTexture, null, bounds, texturePaint)
-            val shade = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(
-                    (190 - illumination.coerceIn(0.0, 1.0) * 70.0).toInt().coerceIn(80, 210),
-                    18,
-                    34,
-                    58,
-                )
-            }
-            canvas.drawCircle(cx, cy, radius, shade)
-            canvas.restore()
-            return
         }
 
-        val earthshineAlpha = ((if (isSky) 38 else 50) * visibility * (1f - illumination.toFloat() * 0.4f)).toInt()
-        val earthshine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(earthshineAlpha.coerceIn(0, 90), 90, 100, 130)
+        /*
+         * Causa do artefato anterior: a camada azul-escura usava alpha 80..210
+         * sem multiplicar por visibility. Em Lua diurna/crepuscular ela ficava
+         * quase opaca e aparecia como um disco rígido atrás da fase iluminada.
+         */
+        val shadeAlpha = earthshineShadeAlpha(
+            illumination = illumination,
+            visibility = visibility,
+            isSky = isSky,
+        )
+        val shade = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (isSky) {
+                Color.argb(shadeAlpha, 36, 50, 72)
+            } else {
+                Color.argb(shadeAlpha, 58, 68, 92)
+            }
         }
-        canvas.drawCircle(cx, cy, radius, earthshine)
+        canvas.drawCircle(cx, cy, radius, shade)
+        canvas.restore()
+    }
+
+    internal fun earthshineShadeAlpha(
+        illumination: Double,
+        visibility: Float,
+        isSky: Boolean,
+    ): Int {
+        val base = if (isSky) 42f else 60f
+        val phaseFactor = 1f - illumination.coerceIn(0.0, 1.0).toFloat() * 0.20f
+        val maxAlpha = if (isSky) 48 else 68
+        return (base * visibility.coerceIn(0f, 1f) * phaseFactor)
+            .toInt()
+            .coerceIn(0, maxAlpha)
     }
 
     internal fun illuminatedPath(
