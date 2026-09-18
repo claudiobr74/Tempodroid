@@ -27,7 +27,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.tempodroid"
+        applicationId = "com.tempodroid.myapp"
         minSdk = 26
         targetSdk = 36
         versionCode = releaseVersionCode
