@@ -38,6 +38,41 @@ class MoonRendererAndroidTest {
     }
 
     @Test
+    fun allOriginalFigmaSkyAssetsDecode() {
+        val context = RuntimeEnvironment.getApplication()
+        FigmaSkyState.entries.forEach { state ->
+            val bitmap = FigmaVisualAssets.sky(context, state)
+            assertTrue("Asset $state deve ter largura", bitmap.width > 0)
+            assertTrue("Asset $state deve ter altura", bitmap.height > 0)
+            assertTrue("Asset $state deve conter pixels", bitmap.byteCount > 0)
+        }
+        val moon = FigmaVisualAssets.moonSurface(context)
+        assertTrue(moon.width > 0)
+        assertTrue(moon.height > 0)
+        assertTrue(moon.byteCount > 0)
+    }
+
+    @Test
+    fun originalFigmaMoonTextureWorksForAllPhases() {
+        val context = RuntimeEnvironment.getApplication()
+        val texture = FigmaVisualAssets.moonSurface(context)
+        MoonPhase.entries.forEach { phase ->
+            val bitmap = MoonRenderer.render(
+                sizePx = 66,
+                phase = phase,
+                illumination = MoonPhaseCalculator.typicalIllumination(phase),
+                hemisphere = Hemisphere.SOUTH,
+                style = MoonRenderStyle.SKY,
+                surfaceTexture = texture,
+            )
+            assertEquals(66, bitmap.width)
+            assertEquals(66, bitmap.height)
+            assertTrue(bitmap.byteCount > 0)
+            bitmap.recycle()
+        }
+    }
+
+    @Test
     fun southAndNorthWaxingDiffer() {
         val south = MoonRenderer.illuminatedPath(32f, 32f, 24f, 0.5, lightFromRight = false)
         val north = MoonRenderer.illuminatedPath(32f, 32f, 24f, 0.5, lightFromRight = true)
