@@ -20,6 +20,10 @@ data class OpenMeteoResponse(
     data class Current(
         val time: String? = null,
         @SerialName("temperature_2m") val temperature: Double? = null,
+        @SerialName("apparent_temperature") val apparentTemperature: Double? = null,
+        @SerialName("relative_humidity_2m") val relativeHumidity: Int? = null,
+        @SerialName("wind_speed_10m") val windSpeed: Double? = null,
+        @SerialName("surface_pressure") val surfacePressure: Double? = null,
         @SerialName("weather_code") val weatherCode: Int? = null,
         @SerialName("cloud_cover") val cloudCover: Int? = null,
         val precipitation: Double? = null,
@@ -59,6 +63,10 @@ object OpenMeteoResponseParser {
             isDay = (current?.isDay ?: 1) == 1,
             timestamp = timestamp,
             timezoneId = response.timezone,
+            apparentTemperature = current?.apparentTemperature?.roundToInt(),
+            relativeHumidity = current?.relativeHumidity,
+            windSpeedKmh = current?.windSpeed?.roundToInt(),
+            surfacePressureHpa = current?.surfacePressure?.roundToInt(),
         )
     }
 

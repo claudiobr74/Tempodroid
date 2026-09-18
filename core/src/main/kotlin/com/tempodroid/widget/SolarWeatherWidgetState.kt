@@ -37,6 +37,10 @@ data class SolarWeatherWidgetState(
     val timezoneId: String = FALLBACK_TIMEZONE,
     val displayTime: LocalTime? = null,
     val displayDate: String = "",
+    val apparentTemperature: Int? = null,
+    val relativeHumidity: Int? = null,
+    val windSpeedKmh: Int? = null,
+    val surfacePressureHpa: Int? = null,
 ) {
     val hemisphere get() = hemisphereFromLatitude(latitude)
 
@@ -114,6 +118,10 @@ object WidgetStateMapper {
             timezoneId = timezoneId,
             displayTime = now,
             displayDate = dateLabel,
+            apparentTemperature = weather?.apparentTemperature,
+            relativeHumidity = weather?.relativeHumidity,
+            windSpeedKmh = weather?.windSpeedKmh,
+            surfacePressureHpa = weather?.surfacePressureHpa,
         )
     }
 }

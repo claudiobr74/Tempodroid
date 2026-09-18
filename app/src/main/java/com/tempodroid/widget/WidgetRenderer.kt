@@ -27,10 +27,16 @@ data class WidgetBitmaps(
 )
 
 object WidgetRenderer {
-    private val cache = LruCache<String, WidgetBitmaps>(4)
+    private val cache = LruCache<String, WidgetBitmaps>(6)
     private val astronomyCalculator = AstronomyCalculator()
 
-    fun render(context: Context, state: SolarWeatherWidgetState, widthPx: Int, heightPx: Int): WidgetBitmaps {
+    fun render(
+        context: Context,
+        state: SolarWeatherWidgetState,
+        widthPx: Int,
+        heightPx: Int,
+        useLiveAstronomy: Boolean = true,
+    ): WidgetBitmaps {
         val density = context.resources.displayMetrics.density
         val widthDp = widthPx / density
         val heightDp = heightPx / density
@@ -40,22 +46,26 @@ object WidgetRenderer {
         val now = state.displayTime ?: LocalTime.now(zone)
         val localDate = LocalDate.now(zone)
         val key = listOf(
-            w, h, mode, localDate, now.hour, now.minute / 10,
+            w, h, mode, localDate, now.hour, now.minute / 10, useLiveAstronomy,
             state.condition, state.moonPhase, state.moonIllumination,
             state.cloudCover, state.weatherCode, state.precipitation,
             state.sunrise, state.sunset, state.city, state.isStale, state.hasWeatherError,
         ).joinToString("|")
         cache.get(key)?.let { return it }
 
-        val liveAstronomy = runCatching {
-            astronomyCalculator.compute(
-                latitude = state.latitude,
-                longitude = state.longitude,
-                date = localDate,
-                timezone = zone,
-                at = now,
-            )
-        }.getOrNull()
+        val liveAstronomy = if (useLiveAstronomy) {
+            runCatching {
+                astronomyCalculator.compute(
+                    latitude = state.latitude,
+                    longitude = state.longitude,
+                    date = localDate,
+                    timezone = zone,
+                    at = now,
+                )
+            }.getOrNull()
+        } else {
+            null
+        }
 
         val renderState = liveAstronomy?.let { astronomy ->
             state.copy(
