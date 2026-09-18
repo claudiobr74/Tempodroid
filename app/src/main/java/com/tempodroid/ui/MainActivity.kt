@@ -25,6 +25,8 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
+    private var resumeGeneration by mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WidgetUpdateCoordinator.refreshNow(this)
@@ -38,13 +40,14 @@ class MainActivity : ComponentActivity() {
             var primaryWidgetId by remember { mutableStateOf<Int?>(null) }
             var networkLabel by remember { mutableStateOf(currentNetworkLabel()) }
             var connectionMessage by remember { mutableStateOf<String?>(null) }
+            val generation = resumeGeneration
 
             val requestedWidgetId = intent?.getIntExtra(
                 AppWidgetManager.EXTRA_APPWIDGET_ID,
                 AppWidgetManager.INVALID_APPWIDGET_ID,
             ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
 
-            LaunchedEffect(reloadKey, requestedWidgetId) {
+            LaunchedEffect(reloadKey, requestedWidgetId, generation) {
                 val manager = AppWidgetManager.getInstance(this@MainActivity)
                 val provider = ComponentName(this@MainActivity, SolarWeatherWidgetReceiver::class.java)
                 val ids = manager.getAppWidgetIds(provider).toList()
@@ -169,10 +172,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Recria a tela ao voltar da configuração para refletir cidade e estado atualizados.
-        if (::class.java != null && intent != null) {
-            // Mantém o ciclo simples e sem observadores globais; a próxima composição carrega o cache atual.
-        }
+        resumeGeneration++
     }
 
     companion object {
