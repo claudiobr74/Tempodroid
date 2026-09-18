@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.tempodroid.myapp",
+      "sha256_cert_fingerprints": [
+        "BE:17:E3:DC:FE:50:42:18:1C:AC:21:1A:03:53:3F:50:57:5C:5E:19:AE:32:B7:E0:2F:4A:43:D9:92:7F:22:19"
+      ]
+    }
+  }
+]
