@@ -13,6 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -53,6 +54,7 @@ class MoonRendererAndroidTest {
 
     @Test
     fun skyRendererCoversRequiredStates() {
+        val context = RuntimeEnvironment.getApplication()
         val states = listOf(
             VisualFixtures.diaLimpo.state to WeatherCondition.CLEAR,
             VisualFixtures.manhaNublada.state to WeatherCondition.CLOUDY,
@@ -63,7 +65,8 @@ class MoonRendererAndroidTest {
         )
         states.forEach { (state, condition) ->
             val bitmap = DynamicSkyRenderer.render(
-                SkyRenderInput(
+                context = context,
+                input = SkyRenderInput(
                     widthPx = 320,
                     heightPx = 160,
                     localTime = state.displayTime ?: java.time.LocalTime.NOON,
