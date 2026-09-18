@@ -33,13 +33,6 @@ object DynamicSkyRenderer {
         val background = FigmaVisualAssets.sky(context, backgroundState)
         drawCenterCrop(canvas, background, w, h)
 
-        val palette = SkyPalette.resolve(
-            period = period,
-            weather = input.weatherCondition,
-            moonPhase = input.moonPhase,
-            moonIllumination = input.moonIllumination,
-        )
-
         val moon = input.moonPosition
         val moonVisibility = if (moon?.aboveHorizon == true) {
             FigmaVisualStateResolver.moonOpacity(period, input.weatherCondition)
@@ -79,7 +72,10 @@ object DynamicSkyRenderer {
             )
         }
 
-        TextProtectionOverlay.draw(canvas, w, h, palette.scrimTop, palette.scrimBottom)
+        // Mede o bitmap já composto (incluindo Lua/oclusão) e protege apenas
+        // as regiões reais de texto. As imagens-fonte do Figma permanecem
+        // intactas e o scrim varia continuamente conforme a luminância local.
+        TextProtectionOverlay.draw(canvas, bitmap, w, h)
         return bitmap
     }
 
