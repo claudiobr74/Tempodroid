@@ -9,6 +9,7 @@ import com.tempodroid.astronomy.AstronomyCalculator
 import com.tempodroid.astronomy.CelestialPositionCalculator
 import com.tempodroid.astronomy.SunPositionCalculator
 import com.tempodroid.sky.DynamicSkyRenderer
+import com.tempodroid.sky.FigmaVisualAssets
 import com.tempodroid.sky.SkyRenderInput
 import com.tempodroid.timeline.SolarLunarTimelineRenderer
 import com.tempodroid.ui.WidgetDimensions
@@ -39,7 +40,8 @@ object WidgetRenderer {
         val localDate = LocalDate.now(zone)
         val key = listOf(
             w, h, mode, localDate, now.hour, now.minute / 10,
-            state.condition, state.moonPhase, state.cloudCover, state.weatherCode,
+            state.condition, state.moonPhase, state.moonIllumination,
+            state.cloudCover, state.weatherCode, state.precipitation,
             state.sunrise, state.sunset, state.city, state.isStale, state.hasWeatherError,
         ).joinToString("|")
         cache.get(key)?.let { return it }
@@ -81,9 +83,11 @@ object WidgetRenderer {
                 null
             }
         }
+        val moonSurface = FigmaVisualAssets.moonSurface(context)
 
         val sky = DynamicSkyRenderer.render(
-            SkyRenderInput(
+            context = context,
+            input = SkyRenderInput(
                 widthPx = w,
                 heightPx = h,
                 localTime = now,
@@ -99,6 +103,7 @@ object WidgetRenderer {
                 hemisphere = renderState.hemisphere,
                 solarNoon = renderState.solarNoon,
             ),
+            moonSurface = moonSurface,
         )
         val timeline = SolarLunarTimelineRenderer.render(
             widthPx = w - (32 * density).toInt(),
@@ -106,6 +111,7 @@ object WidgetRenderer {
             state = renderState,
             now = now,
             compact = mode == WidgetLayoutMode.COMPACT,
+            moonSurface = moonSurface,
         )
         val result = WidgetBitmaps(sky = sky, timeline = timeline, mode = mode)
         cache.put(key, result)
