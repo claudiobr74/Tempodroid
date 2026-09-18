@@ -21,31 +21,22 @@ jobs:
         with:
           ref: figma-visual-states
 
-      - name: Download original Figma DynamicSkyBackground assets
+      - name: Download original Figma lunar texture
         shell: bash
         run: |
           set -euo pipefail
           out='app/src/main/res/drawable-nodpi'
           mkdir -p "$out"
-          curl --fail --location --retry 3 -o "$out/figma_sky_clear_day.png" 'https://www.figma.com/api/mcp/asset/41328e15-57d1-41c4-aeda-55da2595eb9e'
-          curl --fail --location --retry 3 -o "$out/figma_sky_partly_cloudy.png" 'https://www.figma.com/api/mcp/asset/848e5d5b-20d2-43f3-9783-77b1cb45f2e7'
-          curl --fail --location --retry 3 -o "$out/figma_sky_cloudy.png" 'https://www.figma.com/api/mcp/asset/553de636-e1b6-4eec-a782-ae51789be3fc'
-          curl --fail --location --retry 3 -o "$out/figma_sky_rain.png" 'https://www.figma.com/api/mcp/asset/68ac17c1-92c5-4ca4-8c20-a54b4c9f65da'
-          curl --fail --location --retry 3 -o "$out/figma_sky_storm.png" 'https://www.figma.com/api/mcp/asset/304d8db6-cc75-48c9-845a-a8e1a4bad4ee'
-          curl --fail --location --retry 3 -o "$out/figma_sky_sunrise.png" 'https://www.figma.com/api/mcp/asset/7cc918ec-8efb-4e41-b888-eb86bbf4a244'
-          curl --fail --location --retry 3 -o "$out/figma_sky_sunset.png" 'https://www.figma.com/api/mcp/asset/07c1eabb-d505-42fe-8ac1-1a254fc50c10'
-          curl --fail --location --retry 3 -o "$out/figma_sky_clear_night.png" 'https://www.figma.com/api/mcp/asset/89784871-f0a6-4e05-a253-77e1e1dbdd6d'
-          curl --fail --location --retry 3 -o "$out/figma_sky_cloudy_night.png" 'https://www.figma.com/api/mcp/asset/c0bfa167-9a9e-43e8-8544-94cd59430c17'
-          curl --fail --location --retry 3 -o "$out/figma_sky_rain_night.png" 'https://www.figma.com/api/mcp/asset/9a5d2111-8762-4090-af1c-7c3b11c1af1c'
-          file "$out"/*.png
+          curl --fail --location --retry 3 -o "$out/figma_moon_surface.png" 'https://www.figma.com/api/mcp/asset/28009480-1453-4ae7-9a83-406d26d4bf1d'
+          file "$out/figma_moon_surface.png"
 
-      - name: Commit imported assets
+      - name: Commit imported asset
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/res/drawable-nodpi/
+          git add app/src/main/res/drawable-nodpi/figma_moon_surface.png
           git diff --cached --quiet && exit 0
-          git commit -m 'Importa backgrounds originais do Figma [assets]'
+          git commit -m 'Importa textura lunar original do Figma [assets]'
           git push origin HEAD:figma-visual-states
