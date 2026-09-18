@@ -7,7 +7,6 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.Shader
-import com.tempodroid.astronomy.MoonPhaseCalculator
 import com.tempodroid.astronomy.MoonRenderStyle
 import com.tempodroid.astronomy.hemisphereFromLatitude
 import com.tempodroid.sky.MoonRenderer
@@ -24,27 +23,39 @@ object SolarLunarTimelineRenderer {
         state: SolarWeatherWidgetState,
         now: LocalTime,
         compact: Boolean,
+        moonSurface: Bitmap? = null,
+        panelDarknessAlpha: Int = 64,
     ): Bitmap {
         val w = widthPx.coerceAtLeast(120)
         val h = heightPx.coerceAtLeast(48)
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val pad = w * 0.04f
-        TextProtectionOverlay.glassPanel(canvas, 0f, 0f, w.toFloat(), h.toFloat(), h * 0.28f)
+        TextProtectionOverlay.glassPanel(
+            canvas = canvas,
+            left = 0f,
+            top = 0f,
+            right = w.toFloat(),
+            bottom = h.toFloat(),
+            radius = h * 0.28f,
+            darknessAlpha = panelDarknessAlpha,
+        )
         val sunrise = state.sunrise ?: LocalTime.of(6, 10)
         val sunset = state.sunset ?: LocalTime.of(18, 5)
         val model = TimelineCalculator.build(now, sunrise, sunset, state.solarNoon, state.moonrise, state.moonset)
         drawArc(canvas, pad, w - pad, h * 0.38f, h * 0.22f)
         val markers = TimelineLabels.defaultMarkers(sunrise, sunset)
         val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xE6FFFFFF.toInt()
+            color = 0xF2FFFFFF.toInt()
             textSize = h * if (compact) 0.13f else 0.16f
             textAlign = Paint.Align.CENTER
+            setShadowLayer(h * 0.018f, 0f, h * 0.012f, 0x80000000.toInt())
         }
         val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xCCFFFFFF.toInt()
+            color = 0xE6FFFFFF.toInt()
             textSize = h * if (compact) 0.12f else 0.14f
             textAlign = Paint.Align.CENTER
+            setShadowLayer(h * 0.016f, 0f, h * 0.010f, 0x73000000)
         }
         markers.forEach { marker ->
             val x = pad + marker.position * (w - 2 * pad)
@@ -57,6 +68,7 @@ object SolarLunarTimelineRenderer {
                         illumination = state.moonIllumination,
                         hemisphere = hemisphereFromLatitude(state.latitude),
                         style = MoonRenderStyle.TIMELINE,
+                        surfaceTexture = moonSurface,
                     )
                     canvas.drawBitmap(moon, x - moon.width / 2f, iconY - moon.height / 2f, null)
                     moon.recycle()
@@ -113,11 +125,15 @@ object SolarLunarTimelineRenderer {
         compact: Boolean,
     ) {
         val x = left + position.coerceIn(0f, 1f) * (right - left)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFFFFFF.toInt()
+            setShadowLayer(h * 0.014f, 0f, h * 0.01f, 0x80000000.toInt())
+        }
         val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = 0xFFFFFFFF.toInt()
             textSize = h * 0.14f
             textAlign = Paint.Align.CENTER
+            setShadowLayer(h * 0.018f, 0f, h * 0.012f, 0x8A000000.toInt())
         }
         canvas.drawText("agora", x, h * 0.16f, text)
         canvas.drawCircle(x, h * 0.28f, 4.5f, paint)

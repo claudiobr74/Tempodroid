@@ -92,7 +92,7 @@ private fun SolarWeatherContent(state: SolarWeatherWidgetState, appWidgetId: Int
     val weather = actionStartActivity(deepLink(context, "tempodroid://weather", appWidgetId))
     val forecast = actionStartActivity(deepLink(context, "tempodroid://forecast", appWidgetId))
     val white = ColorProvider(Color.White)
-    val secondary = ColorProvider(Color(0xE6FFFFFF))
+    val secondary = ColorProvider(Color(WidgetTheme.TEXT_SECONDARY))
 
     Box(
         modifier = GlanceModifier

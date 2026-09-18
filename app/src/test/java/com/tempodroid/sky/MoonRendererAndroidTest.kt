@@ -1,5 +1,7 @@
 package com.tempodroid.sky
 
+import android.graphics.Bitmap
+import android.graphics.Color
 import com.tempodroid.astronomy.Hemisphere
 import com.tempodroid.astronomy.MoonOrientation
 import com.tempodroid.astronomy.MoonPhase
@@ -13,6 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -37,6 +40,41 @@ class MoonRendererAndroidTest {
     }
 
     @Test
+    fun allOriginalFigmaSkyAssetsDecode() {
+        val context = RuntimeEnvironment.getApplication()
+        FigmaSkyState.entries.forEach { state ->
+            val bitmap = FigmaVisualAssets.sky(context, state)
+            assertTrue("Asset $state deve ter largura", bitmap.width > 0)
+            assertTrue("Asset $state deve ter altura", bitmap.height > 0)
+            assertTrue("Asset $state deve conter pixels", bitmap.byteCount > 0)
+        }
+        val moon = FigmaVisualAssets.moonSurface(context)
+        assertTrue(moon.width > 0)
+        assertTrue(moon.height > 0)
+        assertTrue(moon.byteCount > 0)
+    }
+
+    @Test
+    fun originalFigmaMoonTextureWorksForAllPhases() {
+        val context = RuntimeEnvironment.getApplication()
+        val texture = FigmaVisualAssets.moonSurface(context)
+        MoonPhase.entries.forEach { phase ->
+            val bitmap = MoonRenderer.render(
+                sizePx = 66,
+                phase = phase,
+                illumination = MoonPhaseCalculator.typicalIllumination(phase),
+                hemisphere = Hemisphere.SOUTH,
+                style = MoonRenderStyle.SKY,
+                surfaceTexture = texture,
+            )
+            assertEquals(66, bitmap.width)
+            assertEquals(66, bitmap.height)
+            assertTrue(bitmap.byteCount > 0)
+            bitmap.recycle()
+        }
+    }
+
+    @Test
     fun southAndNorthWaxingDiffer() {
         val south = MoonRenderer.illuminatedPath(32f, 32f, 24f, 0.5, lightFromRight = false)
         val north = MoonRenderer.illuminatedPath(32f, 32f, 24f, 0.5, lightFromRight = true)
@@ -53,6 +91,7 @@ class MoonRendererAndroidTest {
 
     @Test
     fun skyRendererCoversRequiredStates() {
+        val context = RuntimeEnvironment.getApplication()
         val states = listOf(
             VisualFixtures.diaLimpo.state to WeatherCondition.CLEAR,
             VisualFixtures.manhaNublada.state to WeatherCondition.CLOUDY,
@@ -63,7 +102,8 @@ class MoonRendererAndroidTest {
         )
         states.forEach { (state, condition) ->
             val bitmap = DynamicSkyRenderer.render(
-                SkyRenderInput(
+                context = context,
+                input = SkyRenderInput(
                     widthPx = 320,
                     heightPx = 160,
                     localTime = state.displayTime ?: java.time.LocalTime.NOON,
@@ -96,6 +136,33 @@ class MoonRendererAndroidTest {
             assertTrue(bitmap.byteCount > 0)
             bitmap.recycle()
         }
+    }
+
+    @Test
+    fun adaptiveProtectionIsStrongerOnBrightSky() {
+        val dark = Bitmap.createBitmap(320, 160, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.rgb(8, 18, 36))
+        }
+        val bright = Bitmap.createBitmap(320, 160, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.rgb(238, 244, 250))
+        }
+
+        val darkAlpha = TextProtectionOverlay.timelineGlassAlpha(dark)
+        val brightAlpha = TextProtectionOverlay.timelineGlassAlpha(bright)
+
+        assertTrue(brightAlpha > darkAlpha)
+        assertTrue(darkAlpha in 40..55)
+        assertTrue(brightAlpha in 80..90)
+        dark.recycle()
+        bright.recycle()
+    }
+
+    @Test
+    fun adaptiveAlphaStaysInsideDesignedRange() {
+        val dark = TextProtectionOverlay.adaptiveAlpha(0.0, minAlpha = 0.06f, maxAlpha = 0.40f)
+        val bright = TextProtectionOverlay.adaptiveAlpha(1.0, minAlpha = 0.06f, maxAlpha = 0.40f)
+        assertEquals(0.06f, dark, 0.001f)
+        assertEquals(0.40f, bright, 0.001f)
     }
 
     @Test

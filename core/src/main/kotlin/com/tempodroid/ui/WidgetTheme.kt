@@ -13,11 +13,14 @@ object WidgetTypography {
 
 object WidgetTheme {
     const val TEXT_PRIMARY = 0xFFFFFFFF.toInt()
-    const val TEXT_SECONDARY = 0xE6FFFFFF.toInt()
-    const val TEXT_TERTIARY = 0xCCFFFFFF.toInt()
-    const val GLASS_FILL = 0x2EFFFFFF
-    const val GLASS_STROKE = 0x33FFFFFF
-    const val SUMMARY_FILL = 0x38FFFFFF
+    const val TEXT_SECONDARY = 0xF2FFFFFF.toInt()
+    const val TEXT_TERTIARY = 0xE6FFFFFF.toInt()
+
+    // A timeline passa a receber alpha escuro adaptativo em runtime. Estes
+    // tokens permanecem como fallback visual para superfícies secundárias.
+    const val GLASS_FILL = 0x40000000
+    const val GLASS_STROKE = 0x26FFFFFF
+    const val SUMMARY_FILL = 0x3D000000
     const val MARKER_FILL = 0xFFFFFFFF.toInt()
 
     /**
