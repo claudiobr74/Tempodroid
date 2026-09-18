@@ -2,8 +2,8 @@ package com.tempodroid.sky
 
 import com.tempodroid.astronomy.MoonPhase
 import com.tempodroid.weather.WeatherCondition
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class FigmaVisualStateResolverTest {
 
