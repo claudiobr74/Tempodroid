@@ -107,14 +107,14 @@ object TimelineWeatherMarkerRenderer {
 
     private val parsedPaths = mutableMapOf<Glyph, Path>()
 
-    private const val COLOR_DAY_SUN = 0xFFFFC740.toInt()
-    private const val COLOR_DAY_PARTLY = 0xFFE2E8F0.toInt()
-    private const val COLOR_DAY_CLOUD = 0xFFCBD5E1.toInt()
-    private const val COLOR_DAY_RAIN = 0xFF38BDF8.toInt()
-    private const val COLOR_TWILIGHT = 0xFFFF9256.toInt()
-    private const val COLOR_NIGHT = 0xFF38BDF8.toInt()
-    private const val COLOR_NIGHT_MUTED = 0xFF64748B.toInt()
-    private const val COLOR_NOW_ACCENT = 0xFFFFD45A.toInt()
+    private val COLOR_DAY_SUN = 0xFFFFC740.toInt()
+    private val COLOR_DAY_PARTLY = 0xFFE2E8F0.toInt()
+    private val COLOR_DAY_CLOUD = 0xFFCBD5E1.toInt()
+    private val COLOR_DAY_RAIN = 0xFF38BDF8.toInt()
+    private val COLOR_TWILIGHT = 0xFFFF9256.toInt()
+    private val COLOR_NIGHT = 0xFF38BDF8.toInt()
+    private val COLOR_NIGHT_MUTED = 0xFF64748B.toInt()
+    private val COLOR_NOW_ACCENT = 0xFFFFD45A.toInt()
 
     private const val SUN_PATH =
         "M12 1.99902V3.99918M12 20.0005V22.0006M4.92912 4.92895L6.33923 6.33906" +
