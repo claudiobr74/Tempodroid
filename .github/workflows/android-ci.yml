@@ -35,6 +35,9 @@ jobs:
       - name: Tests, lint, debug build and release bundle
         run: ./gradlew :core:test :app:test :app:lintRelease :app:assembleDebug :app:bundleRelease --stacktrace
 
+      - name: Verify Play package
+        run: grep -q '"applicationId": "com.tempodroid.myapp"' app/build/outputs/apk/debug/output-metadata.json
+
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v7
         with:
