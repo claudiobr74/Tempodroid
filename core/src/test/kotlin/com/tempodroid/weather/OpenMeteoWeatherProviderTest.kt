@@ -14,6 +14,10 @@ class OpenMeteoWeatherProviderTest {
         assertTrue(url.startsWith("https://api.open-meteo.com/v1/forecast"))
         assertTrue(url.contains("latitude=-16.6869"))
         assertTrue(url.contains("weather_code"))
+        assertTrue(url.contains("apparent_temperature"))
+        assertTrue(url.contains("relative_humidity_2m"))
+        assertTrue(url.contains("wind_speed_10m"))
+        assertTrue(url.contains("surface_pressure"))
         assertTrue(!url.contains("ui"))
     }
 
@@ -21,7 +25,7 @@ class OpenMeteoWeatherProviderTest {
     fun mapsProviderPayloadToDomain() = runBlocking {
         val json = """
             {"timezone":"America/Sao_Paulo",
-             "current":{"temperature_2m":27.6,"weather_code":61,"cloud_cover":90,"precipitation":1.2,"is_day":1,"time":"2026-09-17T16:40"},
+             "current":{"temperature_2m":27.6,"apparent_temperature":29.2,"relative_humidity_2m":67,"wind_speed_10m":11.4,"surface_pressure":952.7,"weather_code":61,"cloud_cover":90,"precipitation":1.2,"is_day":1,"time":"2026-09-17T16:40"},
              "daily":{"temperature_2m_max":[28.0],"temperature_2m_min":[22.0],"precipitation_probability_max":[85]}}
         """.trimIndent()
         val provider = OpenMeteoWeatherProvider(http = { json })
@@ -29,6 +33,10 @@ class OpenMeteoWeatherProviderTest {
         assertEquals(28, data.high)
         assertEquals(WeatherCondition.RAIN, data.condition)
         assertEquals(85, data.rainChance)
+        assertEquals(29, data.apparentTemperature)
+        assertEquals(67, data.relativeHumidity)
+        assertEquals(11, data.windSpeedKmh)
+        assertEquals(953, data.surfacePressureHpa)
         assertEquals("America/Sao_Paulo", data.timezoneId)
         assertEquals(Instant.parse("2026-09-17T19:40:00Z"), data.timestamp)
     }
