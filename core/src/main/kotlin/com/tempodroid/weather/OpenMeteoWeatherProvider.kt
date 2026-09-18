@@ -19,7 +19,7 @@ class OpenMeteoWeatherProvider(
         return "$baseUrl/v1/forecast" +
             "?latitude=$latitude" +
             "&longitude=$longitude" +
-            "&current=temperature_2m,weather_code,cloud_cover,precipitation,is_day" +
+            "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,surface_pressure,weather_code,cloud_cover,precipitation,is_day" +
             "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset" +
             "&timezone=auto" +
             "&forecast_days=1"
