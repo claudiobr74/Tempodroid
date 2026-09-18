@@ -94,7 +94,7 @@ A versão 1.0.0 descrita nestes documentos é sem anúncios, sem assinatura e se
 
 - conta de desenvolvedor Google Play verificada;
 - identidade/organização verificadas conforme aplicável;
-- package `com.tempodroid` registrado e aceito pela Play Console;
+- package `com.tempodroid.myapp` registrado e aceito pela Play Console;
 - Play App Signing habilitado;
 - upload key criada e guardada com segurança;
 - política de privacidade em URL pública;
