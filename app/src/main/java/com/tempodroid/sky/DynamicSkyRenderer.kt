@@ -1,237 +1,157 @@
 package com.tempodroid.sky
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.Shader
+import android.graphics.Rect
+import android.graphics.RectF
 import com.tempodroid.astronomy.MoonRenderStyle
 import com.tempodroid.astronomy.MoonTerminator
-import com.tempodroid.astronomy.SunPositionCalculator
 import com.tempodroid.ui.WidgetDimensions
 import com.tempodroid.weather.WeatherCondition
-import kotlin.math.hypot
-import kotlin.random.Random
 
+/**
+ * Renderer visual alinhado ao arquivo final do Figma.
+ *
+ * O céu não é mais sintetizado por gradientes/nuvens procedurais. A camada
+ * base usa os dez rasters originais de DynamicSkyBackground. Sol, nuvens,
+ * chuva, atmosfera e estrelas já fazem parte desses assets. A Lua permanece
+ * astronômica/dinâmica e usa a textura original de MoonVisual.
+ */
 object DynamicSkyRenderer {
 
-    fun render(input: SkyRenderInput): Bitmap {
+    fun render(
+        context: Context,
+        input: SkyRenderInput,
+        moonSurface: Bitmap? = null,
+    ): Bitmap {
         val (w, h) = WidgetDimensions.clampBitmapSize(input.widthPx, input.heightPx)
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val period = DayPeriodCalculator.from(input.localTime, input.sunrise, input.sunset, input.solarNoon)
+        val backgroundState = FigmaVisualStateResolver.background(period, input.weatherCondition)
+        val background = FigmaVisualAssets.sky(context, backgroundState)
+        drawCenterCrop(canvas, background, w, h)
+
         val palette = SkyPalette.resolve(
             period = period,
             weather = input.weatherCondition,
             moonPhase = input.moonPhase,
             moonIllumination = input.moonIllumination,
         )
-        drawGradient(canvas, w, h, palette)
-        drawStars(canvas, w, h, palette, input)
-
-        val sun = input.sunPosition ?: SunPositionCalculator.position(
-            input.localTime,
-            input.sunrise,
-            input.sunset,
-            input.solarNoon,
-        )
-        if (sun.aboveHorizon) {
-            val intensity = when (input.weatherCondition) {
-                WeatherCondition.STORM -> 0.25f
-                WeatherCondition.HEAVY_RAIN -> 0.4f
-                WeatherCondition.RAIN, WeatherCondition.CLOUDY -> 0.55f
-                WeatherCondition.FOG -> 0.45f
-                else -> 1f
-            }
-            SunRenderer.draw(
-                canvas = canvas,
-                cx = sun.normalizedX * w,
-                cy = sun.normalizedY * h * 0.72f,
-                radius = h * 0.11f,
-                glowColor = palette.glow,
-                intensity = intensity,
-            )
-        }
 
         val moon = input.moonPosition
-        val isDay = period == DayPeriod.DAY || period == DayPeriod.MORNING || period == DayPeriod.AFTERNOON
-        val moonVis = MoonTerminator.skyVisibility(
+        val isDay = FigmaVisualStateResolver.matrixPeriod(period) == FigmaMatrixPeriod.DAY
+        val moonVisibility = MoonTerminator.skyVisibility(
             aboveHorizon = moon?.aboveHorizon == true,
-            isDay = isDay && period != DayPeriod.SUNSET && period != DayPeriod.TWILIGHT,
+            isDay = isDay,
             weather = input.weatherCondition,
         )
-        if (moon != null && moonVis > 0f) {
+
+        if (moon != null && moonVisibility > 0f) {
+            val moonX = moon.normalizedX * w
+            val moonY = moon.normalizedY * h * 0.70f
+            val radius = h * if (isDay) 0.07f else 0.10f
             MoonRenderer.draw(
                 canvas = canvas,
-                cx = moon.normalizedX * w,
-                cy = moon.normalizedY * h * 0.70f,
-                radius = h * if (isDay) 0.07f else 0.10f,
+                cx = moonX,
+                cy = moonY,
+                radius = radius,
                 phase = input.moonPhase,
                 illumination = input.moonIllumination,
                 hemisphere = input.hemisphere,
                 style = MoonRenderStyle.SKY,
-                visibility = moonVis,
+                visibility = moonVisibility,
+                surfaceTexture = moonSurface ?: FigmaVisualAssets.moonSurface(context),
+            )
+            redrawPhysicalCloudOcclusion(
+                canvas = canvas,
+                background = background,
+                targetWidth = w,
+                targetHeight = h,
+                moonX = moonX,
+                moonY = moonY,
+                moonRadius = radius,
+                condition = input.weatherCondition,
+                cloudCover = input.cloudCover,
             )
         }
 
-        drawAtmosphericHorizon(canvas, w, h, period, palette)
-
-        val cover = effectiveCloudCover(input.cloudCover, input.weatherCondition)
-        CloudRenderer.draw(
-            canvas = canvas,
-            width = w,
-            height = h,
-            cover = cover,
-            lit = palette.cloudLit,
-            shade = palette.cloudShade,
-            seed = input.localTime.hour * 60 + (input.cloudCover ?: 0),
-            nightTint = DayPeriodCalculator.isNightLike(period),
-        )
-        RainRenderer.draw(
-            canvas = canvas,
-            width = w,
-            height = h,
-            condition = input.weatherCondition,
-            precipitation = input.precipitation,
-            rainColor = palette.rain,
-            seed = (input.precipitation?.times(10) ?: 0.0).toInt() + cover,
-        )
+        // No Figma final esta é uma camada independente, acima do céu/Lua e
+        // abaixo dos textos do widget.
         TextProtectionOverlay.draw(canvas, w, h, palette.scrimTop, palette.scrimBottom)
         return bitmap
     }
 
-    private fun effectiveCloudCover(cloudCover: Int?, weather: WeatherCondition): Int {
-        val mapped = when (weather) {
-            WeatherCondition.CLEAR -> 8
-            WeatherCondition.PARTLY_CLOUDY -> 40
-            WeatherCondition.CLOUDY -> 78
-            WeatherCondition.FOG -> 70
-            WeatherCondition.RAIN -> 88
-            WeatherCondition.HEAVY_RAIN -> 94
-            WeatherCondition.STORM -> 98
-        }
-        return (cloudCover ?: mapped)
-            .coerceIn(0, 100)
-            .coerceAtLeast(if (weather == WeatherCondition.CLEAR) 0 else mapped / 2)
+    private fun drawCenterCrop(canvas: Canvas, source: Bitmap, width: Int, height: Int) {
+        val src = centerCropRect(source.width, source.height, width, height)
+        val dst = Rect(0, 0, width, height)
+        canvas.drawBitmap(
+            source,
+            src,
+            dst,
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG),
+        )
     }
 
-    private fun drawGradient(canvas: Canvas, w: Int, h: Int, palette: SkyPalette) {
-        val paint = Paint().apply {
-            shader = LinearGradient(
-                0f,
-                0f,
-                0f,
-                h.toFloat(),
-                intArrayOf(palette.zenith, palette.mid, palette.horizon),
-                floatArrayOf(0f, 0.48f, 1f),
-                Shader.TileMode.CLAMP,
-            )
+    private fun centerCropRect(
+        sourceWidth: Int,
+        sourceHeight: Int,
+        targetWidth: Int,
+        targetHeight: Int,
+    ): Rect {
+        val sourceRatio = sourceWidth.toFloat() / sourceHeight.toFloat()
+        val targetRatio = targetWidth.toFloat() / targetHeight.toFloat()
+        return if (sourceRatio > targetRatio) {
+            val cropWidth = (sourceHeight * targetRatio).toInt().coerceAtMost(sourceWidth)
+            val left = ((sourceWidth - cropWidth) / 2).coerceAtLeast(0)
+            Rect(left, 0, left + cropWidth, sourceHeight)
+        } else {
+            val cropHeight = (sourceWidth / targetRatio).toInt().coerceAtMost(sourceHeight)
+            val top = ((sourceHeight - cropHeight) / 2).coerceAtLeast(0)
+            Rect(0, top, sourceWidth, top + cropHeight)
         }
-        canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), paint)
-
-        val glow = Paint().apply {
-            shader = LinearGradient(
-                w * 0.55f,
-                h * 0.15f,
-                w * 0.85f,
-                h * 0.85f,
-                intArrayOf(withAlpha(palette.glow, 84), Color.TRANSPARENT),
-                null,
-                Shader.TileMode.CLAMP,
-            )
-        }
-        canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), glow)
     }
 
-    private fun drawStars(
+    /**
+     * MoonWeatherSky no Figma possui uma camada "Physical cloud occlusion".
+     * Como os próprios clouds já estão no raster base, redesenhamos localmente
+     * a mesma imagem acima da Lua para recuperar a sensação de nuvem na frente,
+     * sem inventar uma segunda textura.
+     */
+    private fun redrawPhysicalCloudOcclusion(
         canvas: Canvas,
-        w: Int,
-        h: Int,
-        palette: SkyPalette,
-        input: SkyRenderInput,
+        background: Bitmap,
+        targetWidth: Int,
+        targetHeight: Int,
+        moonX: Float,
+        moonY: Float,
+        moonRadius: Float,
+        condition: WeatherCondition,
+        cloudCover: Int?,
     ) {
-        if (palette.starAlpha < 8) return
-        val random = Random(20260917)
-        val count = palette.starAlpha / 3
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        val moon = input.moonPosition
-        val moonX = (moon?.normalizedX ?: -1f) * w
-        val moonY = (moon?.normalizedY ?: -1f) * h * 0.7f
-        val avoid = if (input.moonPhase == com.tempodroid.astronomy.MoonPhase.FULL_MOON) h * 0.22f else h * 0.08f
-        repeat(count) {
-            val x = random.nextFloat() * w
-            val y = random.nextFloat() * h * 0.62f
-            if (moon?.aboveHorizon == true && hypot(x - moonX, y - moonY) < avoid) return@repeat
-            val a = (12 + random.nextInt(palette.starAlpha)).coerceAtMost(255)
-            paint.color = Color.argb(a, 230, 235, 255)
-            canvas.drawCircle(x, y, if (random.nextFloat() > 0.85f) 1.6f else 0.9f, paint)
+        val base = when (condition) {
+            WeatherCondition.CLEAR -> 0f
+            WeatherCondition.PARTLY_CLOUDY -> 0.28f
+            WeatherCondition.CLOUDY -> 0.58f
+            WeatherCondition.FOG -> 0.68f
+            WeatherCondition.RAIN -> 0.72f
+            WeatherCondition.HEAVY_RAIN -> 0.82f
+            WeatherCondition.STORM -> 1f
         }
+        if (base <= 0f) return
+        val cover = ((cloudCover ?: (base * 100).toInt()).coerceIn(0, 100) / 100f)
+        val fraction = (base * 0.65f + cover * 0.35f).coerceIn(0f, 1f)
+        if (fraction >= 0.98f) return // Lua já está invisível em tempestade.
+
+        val left = moonX - moonRadius * 1.15f
+        val right = moonX + moonRadius * 1.15f
+        val top = moonY - moonRadius * 0.10f
+        val bottom = moonY + moonRadius * (0.25f + 1.45f * fraction)
+        canvas.save()
+        canvas.clipRect(RectF(left, top, right, bottom))
+        drawCenterCrop(canvas, background, targetWidth, targetHeight)
+        canvas.restore()
     }
-
-    private fun drawAtmosphericHorizon(
-        canvas: Canvas,
-        w: Int,
-        h: Int,
-        period: DayPeriod,
-        palette: SkyPalette,
-    ) {
-        val haze = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = LinearGradient(
-                0f,
-                h * 0.58f,
-                0f,
-                h.toFloat(),
-                intArrayOf(
-                    Color.TRANSPARENT,
-                    withAlpha(palette.horizon, 44),
-                    withAlpha(palette.horizon, 108),
-                ),
-                floatArrayOf(0f, 0.55f, 1f),
-                Shader.TileMode.CLAMP,
-            )
-        }
-        canvas.drawRect(0f, h * 0.58f, w.toFloat(), h.toFloat(), haze)
-
-        val showSilhouette = period == DayPeriod.NIGHT ||
-            period == DayPeriod.TWILIGHT ||
-            period == DayPeriod.SUNSET ||
-            period == DayPeriod.DAWN
-        if (!showSilhouette) return
-
-        val base = h * 0.92f
-        val path = Path().apply {
-            moveTo(0f, h.toFloat())
-            lineTo(0f, base)
-            quadTo(w * 0.18f, base - h * 0.025f, w * 0.34f, base - h * 0.012f)
-            quadTo(w * 0.52f, base - h * 0.035f, w * 0.70f, base - h * 0.016f)
-            quadTo(w * 0.86f, base - h * 0.026f, w.toFloat(), base - h * 0.010f)
-            lineTo(w.toFloat(), h.toFloat())
-            close()
-        }
-        val silhouette = when (period) {
-            DayPeriod.NIGHT, DayPeriod.TWILIGHT -> Color.argb(150, 8, 16, 30)
-            DayPeriod.SUNSET -> Color.argb(110, 40, 24, 44)
-            else -> Color.argb(78, 20, 40, 48)
-        }
-        canvas.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = silhouette })
-
-        if (period == DayPeriod.NIGHT || period == DayPeriod.TWILIGHT) {
-            val lights = Paint(Paint.ANTI_ALIAS_FLAG)
-            val random = Random(44)
-            repeat(9) {
-                lights.color = Color.argb(105, 255, 216, 152)
-                canvas.drawCircle(
-                    w * (0.24f + random.nextFloat() * 0.52f),
-                    h * (0.945f + random.nextFloat() * 0.02f),
-                    1.0f,
-                    lights,
-                )
-            }
-        }
-    }
-
-    private fun withAlpha(color: Int, alpha: Int): Int =
-        (alpha.coerceIn(0, 255) shl 24) or (color and 0x00FFFFFF)
 }
