@@ -1,6 +1,7 @@
 package com.tempodroid.sky
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import com.tempodroid.astronomy.Hemisphere
 import com.tempodroid.astronomy.MoonOrientation
@@ -155,6 +156,24 @@ class MoonRendererAndroidTest {
         assertTrue(brightAlpha in 80..90)
         dark.recycle()
         bright.recycle()
+    }
+
+    @Test
+    fun continuousTopProtectionHasNoVerticalSeamOnUniformSky() {
+        val bitmap = Bitmap.createBitmap(320, 160, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.rgb(128, 190, 235))
+        }
+        val canvas = Canvas(bitmap)
+        TextProtectionOverlay.draw(canvas, bitmap, bitmap.width, bitmap.height)
+
+        val y = 24
+        val leftOfCenter = bitmap.getPixel(140, y)
+        val center = bitmap.getPixel(160, y)
+        val rightOfCenter = bitmap.getPixel(180, y)
+
+        assertEquals(leftOfCenter, center)
+        assertEquals(center, rightOfCenter)
+        bitmap.recycle()
     }
 
     @Test

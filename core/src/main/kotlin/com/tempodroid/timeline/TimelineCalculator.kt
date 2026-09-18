@@ -54,20 +54,23 @@ data class TimelineMarker(
 
 object TimelineLabels {
     fun defaultMarkers(sunrise: LocalTime, sunset: LocalTime): List<TimelineMarker> = listOf(
-        TimelineMarker(0f, "Madrugada", "00h"),
+        TimelineMarker(0f, "Madrugada", "00:00"),
         TimelineMarker(
             TimelineCalculator.timeToNormalizedPosition(sunrise),
             "Nascer do sol",
-            "%02dh".format(sunrise.hour),
+            formatClock(sunrise),
         ),
-        TimelineMarker(0.5f, "Dia", "12h"),
+        TimelineMarker(0.5f, "Dia", "12:00"),
         TimelineMarker(
             TimelineCalculator.timeToNormalizedPosition(sunset),
             "Pôr do sol",
-            "%02dh".format(sunset.hour),
+            formatClock(sunset),
         ),
-        TimelineMarker(1f, "Noite", "24h"),
+        TimelineMarker(1f, "Noite", "24:00"),
     )
+
+    private fun formatClock(time: LocalTime): String =
+        "%02d:%02d".format(time.hour, time.minute)
 }
 
 data class TimelineRenderInput(

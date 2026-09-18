@@ -55,6 +55,18 @@ class TimelineCalculatorTest {
     }
 
     @Test
+    fun timelineLabelsIncludeMinutes() {
+        val markers = TimelineLabels.defaultMarkers(
+            sunrise = LocalTime.of(6, 10),
+            sunset = LocalTime.of(18, 5),
+        )
+        assertEquals(
+            listOf("00:00", "06:10", "12:00", "18:05", "24:00"),
+            markers.map { it.subtitle },
+        )
+    }
+
+    @Test
     fun dayChangeKeepsPositionsClamped() {
         val pos = TimelineCalculator.fromMinutes(0)
         val end = TimelineCalculator.fromMinutes(1439)

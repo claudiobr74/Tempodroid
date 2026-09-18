@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.RadialGradient
 import android.graphics.Shader
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -14,42 +13,24 @@ import kotlin.math.roundToInt
  * Proteção de contraste para textos sobre os rasters fotográficos do Figma.
  *
  * A imagem original nunca é substituída nem recolorida. O renderer mede a
- * luminância real apenas nas regiões onde o widget coloca texto e aplica
- * scrims neutros locais. Em céu escuro a proteção quase desaparece; em
- * nuvens/sol muito claros ela aumenta suavemente.
+ * luminância real nas regiões de texto e aplica scrims neutros. A proteção do
+ * topo é deliberadamente contínua em toda a largura para evitar costuras ou
+ * mudanças artificiais de tom entre os blocos esquerdo e direito.
  */
 object TextProtectionOverlay {
 
     fun draw(canvas: Canvas, bitmap: Bitmap, width: Int, height: Int) {
-        val leftScore = luminanceScore(bitmap, 0.00f, 0.00f, 0.50f, 0.46f)
-        val rightScore = luminanceScore(bitmap, 0.58f, 0.00f, 1.00f, 0.46f)
+        val topScore = luminanceScore(bitmap, 0.00f, 0.00f, 1.00f, 0.48f)
         val bottomScore = luminanceScore(bitmap, 0.00f, 0.62f, 1.00f, 1.00f)
 
-        val leftAlpha = adaptiveAlpha(leftScore, minAlpha = 0.06f, maxAlpha = 0.40f)
-        val rightAlpha = adaptiveAlpha(rightScore, minAlpha = 0.05f, maxAlpha = 0.36f)
+        val topAlpha = adaptiveAlpha(topScore, minAlpha = 0.05f, maxAlpha = 0.24f)
         val bottomAlpha = adaptiveAlpha(bottomScore, minAlpha = 0.04f, maxAlpha = 0.18f)
 
-        drawRadialScrim(
+        drawContinuousTopScrim(
             canvas = canvas,
-            centerX = width * 0.17f,
-            centerY = height * 0.14f,
-            radius = width * 0.52f,
-            alpha = leftAlpha,
-            clipLeft = 0f,
-            clipTop = 0f,
-            clipRight = width * 0.58f,
-            clipBottom = height * 0.58f,
-        )
-        drawRadialScrim(
-            canvas = canvas,
-            centerX = width * 0.84f,
-            centerY = height * 0.15f,
-            radius = width * 0.46f,
-            alpha = rightAlpha,
-            clipLeft = width * 0.52f,
-            clipTop = 0f,
-            clipRight = width.toFloat(),
-            clipBottom = height * 0.58f,
+            width = width,
+            height = height,
+            alpha = topAlpha,
         )
 
         val bottomPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -112,36 +93,35 @@ object TextProtectionOverlay {
         return minAlpha + (maxAlpha - minAlpha) * eased
     }
 
-    private fun drawRadialScrim(
+    /**
+     * Scrim superior único e contínuo. O shader varia apenas no eixo vertical;
+     * portanto dois pixels na mesma altura recebem exatamente a mesma proteção,
+     * eliminando a emenda vertical que aparecia entre os antigos scrims locais.
+     */
+    private fun drawContinuousTopScrim(
         canvas: Canvas,
-        centerX: Float,
-        centerY: Float,
-        radius: Float,
+        width: Int,
+        height: Int,
         alpha: Float,
-        clipLeft: Float,
-        clipTop: Float,
-        clipRight: Float,
-        clipBottom: Float,
     ) {
         val a = (alpha.coerceIn(0f, 1f) * 255f).roundToInt()
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = RadialGradient(
-                centerX,
-                centerY,
-                radius,
+            shader = LinearGradient(
+                0f,
+                0f,
+                0f,
+                height * 0.64f,
                 intArrayOf(
                     Color.argb(a, 0, 0, 0),
-                    Color.argb((a * 0.58f).roundToInt(), 0, 0, 0),
+                    Color.argb((a * 0.82f).roundToInt(), 0, 0, 0),
+                    Color.argb((a * 0.42f).roundToInt(), 0, 0, 0),
                     Color.TRANSPARENT,
                 ),
-                floatArrayOf(0f, 0.56f, 1f),
+                floatArrayOf(0f, 0.30f, 0.64f, 1f),
                 Shader.TileMode.CLAMP,
             )
         }
-        canvas.save()
-        canvas.clipRect(clipLeft, clipTop, clipRight, clipBottom)
-        canvas.drawCircle(centerX, centerY, radius, paint)
-        canvas.restore()
+        canvas.drawRect(0f, 0f, width.toFloat(), height * 0.64f, paint)
     }
 
     /**
