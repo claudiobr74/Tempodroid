@@ -42,6 +42,15 @@ jobs:
         run: |
           grep -q '"applicationId": "com.tempodroid.myapp"' app/build/outputs/apk/debug/output-metadata.json
 
+      - name: Upload timeline and moon previews
+        uses: actions/upload-artifact@v7
+        with:
+          name: timeline-moon-previews
+          path: app/build/reports/timeline-moon-previews/*.png
+          archive: false
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v7
         with:
