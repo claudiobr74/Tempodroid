@@ -7,17 +7,16 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import com.tempodroid.astronomy.MoonRenderStyle
-import com.tempodroid.astronomy.MoonTerminator
 import com.tempodroid.ui.WidgetDimensions
 import com.tempodroid.weather.WeatherCondition
 
 /**
  * Renderer visual alinhado ao arquivo final do Figma.
  *
- * O céu não é mais sintetizado por gradientes/nuvens procedurais. A camada
- * base usa os dez rasters originais de DynamicSkyBackground. Sol, nuvens,
- * chuva, atmosfera e estrelas já fazem parte desses assets. A Lua permanece
- * astronômica/dinâmica e usa a textura original de MoonVisual.
+ * A camada base usa os dez rasters originais de DynamicSkyBackground. Sol,
+ * nuvens, chuva, atmosfera e estrelas já fazem parte desses assets. A Lua
+ * permanece astronômica/dinâmica, usando a textura, opacidades e escalas
+ * extraídas das variantes MoonWeatherSky.
  */
 object DynamicSkyRenderer {
 
@@ -42,17 +41,19 @@ object DynamicSkyRenderer {
         )
 
         val moon = input.moonPosition
-        val isDay = FigmaVisualStateResolver.matrixPeriod(period) == FigmaMatrixPeriod.DAY
-        val moonVisibility = MoonTerminator.skyVisibility(
-            aboveHorizon = moon?.aboveHorizon == true,
-            isDay = isDay,
-            weather = input.weatherCondition,
-        )
+        val moonVisibility = if (moon?.aboveHorizon == true) {
+            FigmaVisualStateResolver.moonOpacity(period, input.weatherCondition)
+        } else {
+            0f
+        }
 
         if (moon != null && moonVisibility > 0f) {
             val moonX = moon.normalizedX * w
             val moonY = moon.normalizedY * h * 0.70f
-            val radius = h * if (isDay) 0.07f else 0.10f
+            // MoonVisual ocupa 48/58/66px no frame Figma de 160px. O disco
+            // texturizado ocupa 68% do componente (radius = 34%).
+            val moonComponentSize = h * FigmaVisualStateResolver.moonComponentSizeFraction(period)
+            val radius = moonComponentSize * 0.34f
             MoonRenderer.draw(
                 canvas = canvas,
                 cx = moonX,
@@ -78,8 +79,6 @@ object DynamicSkyRenderer {
             )
         }
 
-        // No Figma final esta é uma camada independente, acima do céu/Lua e
-        // abaixo dos textos do widget.
         TextProtectionOverlay.draw(canvas, w, h, palette.scrimTop, palette.scrimBottom)
         return bitmap
     }
@@ -115,10 +114,9 @@ object DynamicSkyRenderer {
     }
 
     /**
-     * MoonWeatherSky no Figma possui uma camada "Physical cloud occlusion".
-     * Como os próprios clouds já estão no raster base, redesenhamos localmente
-     * a mesma imagem acima da Lua para recuperar a sensação de nuvem na frente,
-     * sem inventar uma segunda textura.
+     * As variantes finais WeatherWidget4x2 acrescentam nuvens físicas sobre a
+     * Lua em estados com cobertura. Reutilizamos a própria imagem Figma na
+     * região de oclusão para manter a textura atmosférica coerente.
      */
     private fun redrawPhysicalCloudOcclusion(
         canvas: Canvas,
@@ -143,7 +141,7 @@ object DynamicSkyRenderer {
         if (base <= 0f) return
         val cover = ((cloudCover ?: (base * 100).toInt()).coerceIn(0, 100) / 100f)
         val fraction = (base * 0.65f + cover * 0.35f).coerceIn(0f, 1f)
-        if (fraction >= 0.98f) return // Lua já está invisível em tempestade.
+        if (fraction >= 0.98f) return
 
         val left = moonX - moonRadius * 1.15f
         val right = moonX + moonRadius * 1.15f
