@@ -5,8 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
@@ -19,8 +17,11 @@ import com.tempodroid.astronomy.MoonTerminator
 import kotlin.math.abs
 
 /**
- * Disco lunar com máscara de terminador esférica (não recorte retangular).
- * A mesma [MoonPhase] alimenta céu e timeline.
+ * Disco lunar com máscara de terminador esférica.
+ *
+ * Quando [surfaceTexture] é fornecida, a superfície iluminada usa exatamente
+ * a textura raster do componente MoonVisual do Figma. A mesma máscara
+ * astronômica continua determinando fase, orientação e hemisfério.
  */
 object MoonRenderer {
 
@@ -30,6 +31,7 @@ object MoonRenderer {
         illumination: Double,
         hemisphere: Hemisphere,
         style: MoonRenderStyle,
+        surfaceTexture: Bitmap? = null,
     ): Bitmap {
         val size = sizePx.coerceIn(8, 256)
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -44,6 +46,7 @@ object MoonRenderer {
             hemisphere = hemisphere,
             style = style,
             visibility = 1f,
+            surfaceTexture = surfaceTexture,
         )
         return bitmap
     }
@@ -58,6 +61,7 @@ object MoonRenderer {
         hemisphere: Hemisphere,
         style: MoonRenderStyle,
         visibility: Float,
+        surfaceTexture: Bitmap? = null,
     ) {
         if (visibility <= 0.02f || radius < 1f) return
         val illum = illumination.coerceIn(0.0, 1.0)
@@ -65,6 +69,7 @@ object MoonRenderer {
         val lightFromRight = orientation == MoonOrientation.LIGHT_FROM_RIGHT
         val haloBoost = if (phase == MoonPhase.FULL_MOON) 1f else illum.toFloat()
         val isSky = style == MoonRenderStyle.SKY
+        val discBounds = RectF(cx - radius, cy - radius, cx + radius, cy + radius)
 
         if (isSky && haloBoost > 0.2f && visibility > 0.4f) {
             val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -84,31 +89,80 @@ object MoonRenderer {
             canvas.drawCircle(cx, cy, radius * (2.4f + haloBoost), haloPaint)
         }
 
-        val earthshineAlpha = ((if (isSky) 38 else 50) * visibility * (1f - illum.toFloat() * 0.4f)).toInt()
+        drawEarthshine(
+            canvas = canvas,
+            bounds = discBounds,
+            cx = cx,
+            cy = cy,
+            radius = radius,
+            illumination = illum,
+            visibility = visibility,
+            isSky = isSky,
+            surfaceTexture = surfaceTexture,
+        )
+
+        if (illum <= 0.03 && phase == MoonPhase.NEW_MOON) return
+
+        val litPath = illuminatedPath(cx, cy, radius, illum, lightFromRight)
+        canvas.save()
+        canvas.clipPath(litPath)
+        if (surfaceTexture != null && !surfaceTexture.isRecycled) {
+            val texturePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+                alpha = (255 * visibility).toInt().coerceIn(0, 255)
+            }
+            canvas.drawBitmap(surfaceTexture, null, discBounds, texturePaint)
+        } else {
+            val lit = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb((255 * visibility).toInt().coerceIn(0, 255), 232, 236, 242)
+            }
+            canvas.drawPath(litPath, lit)
+            val crater = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb((40 * visibility).toInt(), 160, 165, 180)
+            }
+            canvas.drawCircle(cx - radius * 0.22f, cy - radius * 0.18f, radius * 0.16f, crater)
+            canvas.drawCircle(cx + radius * 0.18f, cy + radius * 0.12f, radius * 0.10f, crater)
+            canvas.drawCircle(cx - radius * 0.05f, cy + radius * 0.28f, radius * 0.08f, crater)
+        }
+        canvas.restore()
+    }
+
+    private fun drawEarthshine(
+        canvas: Canvas,
+        bounds: RectF,
+        cx: Float,
+        cy: Float,
+        radius: Float,
+        illumination: Double,
+        visibility: Float,
+        isSky: Boolean,
+        surfaceTexture: Bitmap?,
+    ) {
+        if (surfaceTexture != null && !surfaceTexture.isRecycled) {
+            val disc = Path().apply { addCircle(cx, cy, radius, Path.Direction.CW) }
+            canvas.save()
+            canvas.clipPath(disc)
+            val texturePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+                alpha = ((if (isSky) 82 else 96) * visibility).toInt().coerceIn(0, 120)
+            }
+            canvas.drawBitmap(surfaceTexture, null, bounds, texturePaint)
+            val shade = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(
+                    (190 - illumination.coerceIn(0.0, 1.0) * 70.0).toInt().coerceIn(80, 210),
+                    18,
+                    34,
+                    58,
+                )
+            }
+            canvas.drawCircle(cx, cy, radius, shade)
+            canvas.restore()
+            return
+        }
+
+        val earthshineAlpha = ((if (isSky) 38 else 50) * visibility * (1f - illumination.toFloat() * 0.4f)).toInt()
         val earthshine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(earthshineAlpha.coerceIn(0, 90), 90, 100, 130)
         }
         canvas.drawCircle(cx, cy, radius, earthshine)
-
-        if (illum <= 0.03 && phase == MoonPhase.NEW_MOON) return
-
-        val layer = canvas.saveLayer(cx - radius * 1.2f, cy - radius * 1.2f, cx + radius * 1.2f, cy + radius * 1.2f, null)
-        val lit = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb((255 * visibility).toInt().coerceIn(0, 255), 232, 236, 242)
-        }
-        val litPath = illuminatedPath(cx, cy, radius, illum, lightFromRight)
-        canvas.drawPath(litPath, lit)
-
-        val crater = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb((40 * visibility).toInt(), 160, 165, 180)
-        }
-        canvas.save()
-        canvas.clipPath(litPath)
-        canvas.drawCircle(cx - radius * 0.22f, cy - radius * 0.18f, radius * 0.16f, crater)
-        canvas.drawCircle(cx + radius * 0.18f, cy + radius * 0.12f, radius * 0.10f, crater)
-        canvas.drawCircle(cx - radius * 0.05f, cy + radius * 0.28f, radius * 0.08f, crater)
-        canvas.restore()
-        canvas.restoreToCount(layer)
     }
 
     internal fun illuminatedPath(
