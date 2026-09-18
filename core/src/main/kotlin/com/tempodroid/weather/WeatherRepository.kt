@@ -18,6 +18,10 @@ data class WeatherData(
     val timestamp: Instant?,
     val timezoneId: String? = null,
     val cityName: String? = null,
+    val apparentTemperature: Int? = null,
+    val relativeHumidity: Int? = null,
+    val windSpeedKmh: Int? = null,
+    val surfacePressureHpa: Int? = null,
 )
 
 interface WeatherProvider {
