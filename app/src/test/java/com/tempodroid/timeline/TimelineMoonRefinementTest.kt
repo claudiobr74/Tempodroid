@@ -81,16 +81,16 @@ class TimelineMoonRefinementTest {
     }
 
     @Test
-    fun v2MetricsMirrorFigmaViewportDimensions() {
+    fun hybridMetricsIncreaseSolarAnchorReadability() {
         val metrics = SolarLunarTimelineRenderer.visualMetrics
-        assertEquals(22f / 80f, metrics.sunriseOuterDiameterFraction, 0.0001f)
+        assertEquals(28f / 80f, metrics.sunriseOuterDiameterFraction, 0.0001f)
         assertEquals(16f / 80f, metrics.sunriseInnerDiameterFraction, 0.0001f)
-        assertEquals(13f / 80f, metrics.anchorTimeTextFraction, 0.0001f)
-        assertEquals(9f / 80f, metrics.anchorLabelTextFraction, 0.0001f)
-        assertEquals(44f / 80f, metrics.nowBadgeDiameterFraction, 0.0001f)
-        assertEquals(28f / 44f, metrics.nowIconFractionOfBadge, 0.0001f)
+        assertEquals(15f / 80f, metrics.anchorTimeTextFraction, 0.0001f)
+        assertEquals(8f / 80f, metrics.anchorLabelTextFraction, 0.0001f)
+        assertEquals(42f / 80f, metrics.nowBadgeDiameterFraction, 0.0001f)
+        assertEquals(26f / 42f, metrics.nowIconFractionOfBadge, 0.0001f)
         assertEquals(11f / 80f, metrics.nowTimeTextFraction, 0.0001f)
-        assertEquals(10f / 80f, metrics.nowLabelTextFraction, 0.0001f)
+        assertEquals(9f / 80f, metrics.nowLabelTextFraction, 0.0001f)
     }
 
     @Test
@@ -122,6 +122,7 @@ class TimelineMoonRefinementTest {
             condition = WeatherCondition.PARTLY_CLOUDY,
         )
         listOf(
+            LocalTime.of(0, 5),
             LocalTime.of(6, 11),
             LocalTime.of(10, 30),
             LocalTime.of(12, 0),
@@ -163,6 +164,24 @@ class TimelineMoonRefinementTest {
         )
         assertTrue(countNearColor(bitmap, TimelineWeatherMarkerRenderer.SUN_GOLD) > 8)
         assertTrue(countNearColor(bitmap, TimelineWeatherMarkerRenderer.SUNSET_ORANGE) > 8)
+        bitmap.recycle()
+    }
+
+    @Test
+    fun hybridTimelineRestoresGlassPanel() {
+        val bitmap = SolarLunarTimelineRenderer.render(
+            widthPx = 608,
+            heightPx = 100,
+            state = SolarWeatherWidgetState.Empty.copy(
+                sunrise = LocalTime.of(6, 11),
+                sunset = LocalTime.of(18, 13),
+                condition = WeatherCondition.CLEAR,
+            ),
+            now = LocalTime.of(10, 30),
+            compact = false,
+            panelDarknessAlpha = 64,
+        )
+        assertTrue(Color.alpha(bitmap.getPixel(bitmap.width / 2, bitmap.height / 2)) > 20)
         bitmap.recycle()
     }
 
