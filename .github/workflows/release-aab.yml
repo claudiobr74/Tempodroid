@@ -1,9 +1,16 @@
 name: Build signed Play Store AAB
 
 on:
-  push:
-    branches:
-      - release/play-aab-9
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Android versionCode"
+        required: true
+        default: "1"
+      version_name:
+        description: "Versão pública (ex.: 1.0.0)"
+        required: true
+        default: "1.0.0"
 
 permissions:
   contents: read
@@ -11,10 +18,6 @@ permissions:
 concurrency:
   group: tempodroid-release
   cancel-in-progress: false
-
-env:
-  RELEASE_VERSION_CODE: "9"
-  RELEASE_VERSION_NAME: "1.0.0"
 
 jobs:
   signed-aab:
@@ -47,8 +50,8 @@ jobs:
 
       - name: Build signed release bundle
         env:
-          TEMPODROID_VERSION_CODE: ${{ env.RELEASE_VERSION_CODE }}
-          TEMPODROID_VERSION_NAME: ${{ env.RELEASE_VERSION_NAME }}
+          TEMPODROID_VERSION_CODE: ${{ inputs.version_code }}
+          TEMPODROID_VERSION_NAME: ${{ inputs.version_name }}
           TEMPODROID_KEYSTORE_PATH: ${{ runner.temp }}/tempodroid-upload.jks
           TEMPODROID_KEYSTORE_PASSWORD: ${{ secrets.TEMPODROID_KEYSTORE_PASSWORD }}
           TEMPODROID_KEY_ALIAS: ${{ secrets.TEMPODROID_KEY_ALIAS }}
@@ -58,7 +61,6 @@ jobs:
       - name: Upload signed AAB
         uses: actions/upload-artifact@v7
         with:
-          name: tempodroid-play-${{ env.RELEASE_VERSION_NAME }}-${{ env.RELEASE_VERSION_CODE }}
           path: app/build/outputs/bundle/release/app-release.aab
           archive: false
           if-no-files-found: error
@@ -67,7 +69,7 @@ jobs:
       - name: Preserve production R8 mapping
         uses: actions/upload-artifact@v7
         with:
-          name: r8-mapping-${{ env.RELEASE_VERSION_NAME }}-${{ env.RELEASE_VERSION_CODE }}
+          name: r8-mapping-${{ inputs.version_name }}-${{ inputs.version_code }}
           path: app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
           retention-days: 30
