@@ -1,10 +1,10 @@
-name: Android CI
+name: Android CI — validação final
 
 on:
+  workflow_dispatch:
   pull_request:
-  push:
-    branches:
-      - main
+    types:
+      - ready_for_review
 
 permissions:
   contents: read
@@ -15,8 +15,12 @@ concurrency:
 
 jobs:
   build-and-test:
+    # No plano GitHub Free, este workflow roda somente uma vez quando o PR
+    # sai de draft ou quando for disparado manualmente. Evita gastar minutos
+    # a cada commit/synchronize durante o desenvolvimento.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -36,21 +40,8 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Tests, lint and debug build
-        run: ./gradlew :core:test :app:test :app:lintRelease :app:assembleDebug --stacktrace
-
-      - name: Release bundle validation on main
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: ./gradlew :app:bundleRelease --stacktrace
+        run: ./gradlew :core:test :app:test :app:lintRelease :app:assembleDebug --stacktrace --parallel --build-cache
 
       - name: Verify Play package
         run: |
           grep -q '"applicationId": "com.tempodroid.myapp"' app/build/outputs/apk/debug/output-metadata.json
-
-      - name: Upload timeline and moon previews
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v7
-        with:
-          name: timeline-moon-previews
-          path: app/build/reports/timeline-moon-previews/*.png
-          if-no-files-found: error
-          retention-days: 1
