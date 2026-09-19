@@ -25,8 +25,9 @@ import kotlin.math.sqrt
 /**
  * Timeline híbrida premium.
  *
- * Recupera a profundidade visual da timeline anterior (glass + arco multicolorido),
- * mantendo a informação simplificada aprovada: apenas Nascer, Agora e Ocaso.
+ * Mantém apenas Nascer, Agora e Ocaso. No widget real o horário textual de
+ * "Agora" é fornecido por um TextClock nativo; o bitmap continua responsável
+ * pela curva, pelo ponto cronológico e pelo badge visual.
  */
 object SolarLunarTimelineRenderer {
 
@@ -44,6 +45,11 @@ object SolarLunarTimelineRenderer {
         val centerX: Float,
         val centerY: Float,
         val displaced: Boolean,
+    )
+
+    internal data class NowClockOverlayPlacement(
+        val centerXFraction: Float,
+        val topFraction: Float,
     )
 
     internal data class TimelineVisualMetrics(
@@ -67,6 +73,7 @@ object SolarLunarTimelineRenderer {
         compact: Boolean,
         @Suppress("UNUSED_PARAMETER") moonSurface: Bitmap? = null,
         panelDarknessAlpha: Int = 64,
+        drawNowTime: Boolean = true,
     ): Bitmap {
         val w = widthPx.coerceAtLeast(120)
         val h = heightPx.coerceAtLeast(48)
@@ -141,8 +148,76 @@ object SolarLunarTimelineRenderer {
             sunset = sunset,
             arcCy = arcCy,
             arcRise = arcRise,
+            drawNowTime = drawNowTime,
         )
         return bitmap
+    }
+
+    internal fun nowClockOverlayPlacement(
+        widthPx: Int,
+        heightPx: Int,
+        state: SolarWeatherWidgetState,
+        now: LocalTime,
+        compact: Boolean,
+    ): NowClockOverlayPlacement {
+        val w = widthPx.coerceAtLeast(120)
+        val h = heightPx.coerceAtLeast(48)
+        val left = w * 0.045f
+        val right = w * 0.955f
+        val sunrise = state.sunrise ?: LocalTime.of(6, 10)
+        val sunset = state.sunset ?: LocalTime.of(18, 5)
+        val position = visualPosition(now)
+        val markerX = xFor(position, left, right)
+        val arcCy = h * 0.58f
+        val arcRise = h * 0.42f
+        val markerY = yOnArc(position, arcCy, arcRise)
+        val sunriseX = xFor(visualPosition(sunrise), left, right)
+        val sunsetX = xFor(visualPosition(sunset), left, right)
+        val diameter = h * if (compact) 0.47f else visualMetrics.nowBadgeDiameterFraction
+        val radius = diameter / 2f
+        val layoutBase = calculateNowMarkerLayout(
+            left = left,
+            right = right,
+            h = h,
+            position = position,
+            bubbleWidth = diameter,
+            bubbleHeight = diameter,
+            arcCy = arcCy,
+            arcRise = arcRise,
+            markerYOverride = markerY,
+        )
+        val defaultCenterY = (markerY - radius * 0.28f).coerceIn(
+            radius + h * 0.13f,
+            h - radius - h * 0.17f,
+        )
+        val placement = collisionAdjustedPlacement(
+            desiredCenterX = layoutBase.bubbleCenterX,
+            desiredCenterY = defaultCenterY,
+            markerX = markerX,
+            markerY = markerY,
+            sunriseX = sunriseX,
+            sunsetX = sunsetX,
+            diameter = diameter,
+            left = left,
+            right = right,
+            h = h,
+            now = now,
+            sunrise = sunrise,
+            sunset = sunset,
+        )
+        val textSize = h * if (compact) 0.13f else visualMetrics.nowTimeTextFraction
+        val timeBaseline = min(h - h * 0.020f, placement.centerY + radius + textSize * 1.05f)
+        val preSunriseEdgeCollision = placement.displaced && markerX < sunriseX && placement.centerX < sunriseX
+        val timeTextX = if (preSunriseEdgeCollision) {
+            (placement.centerX - diameter * 0.20f).coerceAtLeast(left + diameter * 0.40f)
+        } else {
+            placement.centerX
+        }
+        val top = (timeBaseline - textSize * 0.92f).coerceIn(0f, h - textSize)
+        return NowClockOverlayPlacement(
+            centerXFraction = (timeTextX / w).coerceIn(0f, 1f),
+            topFraction = (top / h).coerceIn(0f, 1f),
+        )
     }
 
     private fun drawGlassPanel(canvas: Canvas, w: Int, h: Int, panelDarknessAlpha: Int) {
@@ -344,6 +419,7 @@ object SolarLunarTimelineRenderer {
         sunset: LocalTime,
         arcCy: Float,
         arcRise: Float,
+        drawNowTime: Boolean,
     ) {
         val metrics = visualMetrics
         val diameter = h * if (compact) 0.47f else metrics.nowBadgeDiameterFraction
@@ -408,24 +484,46 @@ object SolarLunarTimelineRenderer {
             style = Paint.Style.FILL
         })
 
+        // Sombra curta: dá separação sem transformar o vidro em um disco preto.
         val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0x4D000000
+            color = 0x18000000
             style = Paint.Style.FILL
-            setShadowLayer(h * 0.045f, 0f, h * 0.020f, 0x99000000.toInt())
+            setShadowLayer(h * 0.030f, 0f, h * 0.012f, 0x44000000)
         }
-        canvas.drawCircle(adjustedX, centerY + h * 0.010f, radius * 1.02f, shadow)
+        canvas.drawCircle(adjustedX, centerY + h * 0.006f, radius * 1.015f, shadow)
 
+        // Vidro real: gradiente claro/translúcido que deixa curva e céu respirarem.
         val badgeFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (period == DayPeriod.NIGHT) 0xB0182740.toInt() else 0xA8192B42.toInt()
+            shader = LinearGradient(
+                adjustedX - radius,
+                centerY - radius,
+                adjustedX + radius,
+                centerY + radius,
+                if (period == DayPeriod.NIGHT) {
+                    intArrayOf(
+                        0x704D6B8A.toInt(),
+                        0x4A38536D.toInt(),
+                        0x32253B52.toInt(),
+                    )
+                } else {
+                    intArrayOf(
+                        0x82FFFFFF.toInt(),
+                        0x58BCD3E5.toInt(),
+                        0x3C65839D.toInt(),
+                    )
+                },
+                floatArrayOf(0f, 0.55f, 1f),
+                Shader.TileMode.CLAMP,
+            )
             style = Paint.Style.FILL
         }
         val badgeStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (period == DayPeriod.NIGHT) 0x78B8CAEA else 0x70FFFFFF
+            color = if (period == DayPeriod.NIGHT) 0xA6DCE9FF.toInt() else 0xB8FFFFFF.toInt()
             style = Paint.Style.STROKE
             strokeWidth = max(1.2f, h * 0.013f)
         }
         val innerStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = withAlpha(accent, 88)
+            color = withAlpha(accent, 76)
             style = Paint.Style.STROKE
             strokeWidth = max(1f, h * 0.007f)
         }
@@ -465,7 +563,9 @@ object SolarLunarTimelineRenderer {
             adjustedX
         }
         canvas.drawText("Agora", adjustedX, labelBaseline, nowLabelPaint)
-        canvas.drawText(label, timeTextX, timeBaseline, timePaint)
+        if (drawNowTime) {
+            canvas.drawText(label, timeTextX, timeBaseline, timePaint)
+        }
     }
 
     internal fun calculateNowMarkerLayout(
@@ -501,8 +601,7 @@ object SolarLunarTimelineRenderer {
 
     /**
      * Preserva o ponto cronológico na curva e desloca apenas o badge quando há
-     * colisão espacial com Nascer/Ocaso. Antes do evento o callout foge para o
-     * lado externo correspondente; depois do evento ele foge para o lado oposto.
+     * colisão espacial com Nascer/Ocaso.
      */
     internal fun collisionAdjustedPlacement(
         desiredCenterX: Float,
@@ -577,10 +676,6 @@ object SolarLunarTimelineRenderer {
         )
     }
 
-    /**
-     * Mantém a projeção temporal já validada nos previews v2; o redesign desta
-     * etapa é apenas visual, não altera a cronologia horizontal.
-     */
     internal fun visualPosition(time: LocalTime): Float {
         val minute = minuteOf(time)
         val anchors = POSITION_ANCHORS
