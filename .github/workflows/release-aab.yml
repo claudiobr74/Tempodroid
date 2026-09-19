@@ -15,10 +15,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: tempodroid-release
+  cancel-in-progress: false
+
 jobs:
   signed-aab:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -52,7 +56,7 @@ jobs:
           TEMPODROID_KEYSTORE_PASSWORD: ${{ secrets.TEMPODROID_KEYSTORE_PASSWORD }}
           TEMPODROID_KEY_ALIAS: ${{ secrets.TEMPODROID_KEY_ALIAS }}
           TEMPODROID_KEY_PASSWORD: ${{ secrets.TEMPODROID_KEY_PASSWORD }}
-        run: ./gradlew :core:test :app:test :app:lintRelease :app:bundleRelease --stacktrace
+        run: ./gradlew :core:test :app:test :app:lintRelease :app:bundleRelease --stacktrace --parallel --build-cache
 
       - name: Upload signed AAB
         uses: actions/upload-artifact@v7
@@ -60,7 +64,7 @@ jobs:
           path: app/build/outputs/bundle/release/app-release.aab
           archive: false
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
 
       - name: Preserve production R8 mapping
         uses: actions/upload-artifact@v7
@@ -68,4 +72,4 @@ jobs:
           name: r8-mapping-${{ inputs.version_name }}-${{ inputs.version_code }}
           path: app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
