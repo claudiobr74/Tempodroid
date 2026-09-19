@@ -495,8 +495,8 @@ object SolarLunarTimelineRenderer {
 
     /**
      * Preserva o ponto cronológico na curva e desloca apenas o badge quando há
-     * colisão com Nascer/Ocaso. Perto do Ocaso o callout sobe e vai à esquerda;
-     * perto do Nascer, sobe e vai à direita.
+     * colisão espacial com Nascer/Ocaso. Antes do evento o callout foge para o
+     * lado externo correspondente; depois do evento ele foge para o lado oposto.
      */
     internal fun collisionAdjustedPlacement(
         desiredCenterX: Float,
@@ -522,23 +522,38 @@ object SolarLunarTimelineRenderer {
         val setMinutes = minuteOf(sunset)
         val minutesFromSunrise = nowMinutes - riseMinutes
         val minutesUntilSunset = setMinutes - nowMinutes
-        val threshold = diameter * 1.16f
 
-        val nearSunrise =
-            minutesFromSunrise in -18..18 && abs(markerX - sunriseX) < threshold * 1.45f
-        val nearSunset =
-            minutesUntilSunset in -6..30 && abs(markerX - sunsetX) < threshold * 1.55f
+        val spatialThreshold = diameter * 1.12f
+        val temporalThreshold = diameter * 1.35f
+        val nearSunriseSpatial = abs(desiredCenterX - sunriseX) < spatialThreshold
+        val nearSunsetSpatial = abs(desiredCenterX - sunsetX) < spatialThreshold
+        val nearSunriseTemporal =
+            minutesFromSunrise in -18..18 && abs(markerX - sunriseX) < temporalThreshold
+        val nearSunsetTemporal =
+            minutesUntilSunset in -8..30 && abs(markerX - sunsetX) < temporalThreshold
+
+        val nearSunrise = nearSunriseSpatial || nearSunriseTemporal
+        val nearSunset = nearSunsetSpatial || nearSunsetTemporal
 
         when {
             nearSunrise -> {
-                centerX = sunriseX + diameter * 1.12f
-                centerY = markerY - diameter * 0.78f
+                val markerBeforeSunrise = markerX < sunriseX - diameter * 0.15f
+                centerX = if (markerBeforeSunrise) {
+                    sunriseX - diameter * 1.05f
+                } else {
+                    sunriseX + diameter * 1.10f
+                }
+                centerY = markerY - diameter * 0.88f
                 displaced = true
             }
             nearSunset -> {
-                val critical = minutesUntilSunset in -6..9
-                centerX = sunsetX - diameter * if (critical) 1.28f else 1.12f
-                centerY = markerY - diameter * if (critical) 0.88f else 0.72f
+                val markerBeforeSunset = markerX <= sunsetX
+                centerX = if (markerBeforeSunset) {
+                    sunsetX - diameter * 1.22f
+                } else {
+                    sunsetX + diameter * 1.10f
+                }
+                centerY = markerY - diameter * 0.88f
                 displaced = true
             }
         }
@@ -546,7 +561,7 @@ object SolarLunarTimelineRenderer {
         val radius = diameter / 2f
         val minCenterX = left + radius + diameter * 0.10f
         val maxCenterX = right - radius - diameter * 0.10f
-        val minCenterY = radius + h * 0.13f
+        val minCenterY = radius + h * if (displaced) 0.045f else 0.13f
         val maxCenterY = h - radius - h * 0.17f
 
         return NowBadgePlacement(
