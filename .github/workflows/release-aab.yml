@@ -1,9 +1,16 @@
 name: Build signed Play Store AAB
 
 on:
-  push:
-    branches:
-      - release/play-aab-10
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Android versionCode"
+        required: true
+        default: "1"
+      version_name:
+        description: "Versão pública (ex.: 1.0.0)"
+        required: true
+        default: "1.0.0"
 
 permissions:
   contents: read
@@ -15,10 +22,7 @@ concurrency:
 jobs:
   signed-aab:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      RELEASE_VERSION_CODE: "10"
-      RELEASE_VERSION_NAME: "1.0.0"
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -30,6 +34,9 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: gradle
+
+      - name: Verify Figma visual assets
+        run: python3 scripts/verify_figma_visual_assets.py
 
       - name: Make Gradle executable
         run: chmod +x ./gradlew
@@ -43,18 +50,17 @@ jobs:
 
       - name: Build signed release bundle
         env:
-          TEMPODROID_VERSION_CODE: ${{ env.RELEASE_VERSION_CODE }}
-          TEMPODROID_VERSION_NAME: ${{ env.RELEASE_VERSION_NAME }}
+          TEMPODROID_VERSION_CODE: ${{ inputs.version_code }}
+          TEMPODROID_VERSION_NAME: ${{ inputs.version_name }}
           TEMPODROID_KEYSTORE_PATH: ${{ runner.temp }}/tempodroid-upload.jks
           TEMPODROID_KEYSTORE_PASSWORD: ${{ secrets.TEMPODROID_KEYSTORE_PASSWORD }}
           TEMPODROID_KEY_ALIAS: ${{ secrets.TEMPODROID_KEY_ALIAS }}
           TEMPODROID_KEY_PASSWORD: ${{ secrets.TEMPODROID_KEY_PASSWORD }}
-        run: ./gradlew :app:bundleRelease --stacktrace --parallel --build-cache
+        run: ./gradlew :core:test :app:test :app:lintRelease :app:bundleRelease --stacktrace --parallel --build-cache
 
       - name: Upload signed AAB
         uses: actions/upload-artifact@v7
         with:
-          name: app-release.aab
           path: app/build/outputs/bundle/release/app-release.aab
           archive: false
           if-no-files-found: error
@@ -63,7 +69,7 @@ jobs:
       - name: Preserve production R8 mapping
         uses: actions/upload-artifact@v7
         with:
-          name: r8-mapping-1.0.0-10
+          name: r8-mapping-${{ inputs.version_name }}-${{ inputs.version_code }}
           path: app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
           retention-days: 30
