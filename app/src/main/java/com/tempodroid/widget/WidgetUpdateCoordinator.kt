@@ -21,24 +21,35 @@ object WidgetUpdateCoordinator {
     const val UNIQUE_PERIODIC = "solar_weather_widget_periodic"
     const val UNIQUE_TIMELINE_PERIODIC = "solar_weather_widget_timeline_periodic"
     const val UNIQUE_ONCE_ALL = "solar_weather_widget_once_all"
+    const val UNIQUE_ASTRONOMY_ONCE = "solar_weather_widget_astronomy_once"
     const val KEY_APP_WIDGET_ID = "app_widget_id"
 
     fun ensurePeriodic(context: Context) {
+        val workManager = WorkManager.getInstance(context)
         val weatherRequest = PeriodicWorkRequestBuilder<WeatherUpdateWorker>(30, TimeUnit.MINUTES).build()
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+        workManager.enqueueUniquePeriodicWork(
             UNIQUE_PERIODIC,
             ExistingPeriodicWorkPolicy.KEEP,
             weatherRequest,
         )
 
-        // O horário textual de Agora é um TextClock nativo. Este worker continua
-        // atualizando apenas a posição astronômica/visual do marcador sem rede.
-        val timelineRequest = PeriodicWorkRequestBuilder<TimelineUpdateWorker>(15, TimeUnit.MINUTES).build()
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            UNIQUE_TIMELINE_PERIODIC,
-            ExistingPeriodicWorkPolicy.KEEP,
-            timelineRequest,
+        /*
+         * Migração da versão anterior: PeriodicWorkRequest de 15 min não é
+         * adequado para um relógio visual porque o Android pode adiá-lo por
+         * horas. Cancela a agenda antiga e usa o alarme local one-shot.
+         */
+        workManager.cancelUniqueWork(UNIQUE_TIMELINE_PERIODIC)
+        AstronomyRefreshScheduler.scheduleNext(context)
+    }
+
+    fun refreshAstronomyNow(context: Context) {
+        val request = OneTimeWorkRequestBuilder<TimelineUpdateWorker>().build()
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            UNIQUE_ASTRONOMY_ONCE,
+            ExistingWorkPolicy.REPLACE,
+            request,
         )
+        AstronomyRefreshScheduler.scheduleNext(context)
     }
 
     fun refreshNow(context: Context) {
@@ -48,6 +59,7 @@ object WidgetUpdateCoordinator {
             ExistingWorkPolicy.REPLACE,
             request,
         )
+        refreshAstronomyNow(context)
         ensurePeriodic(context)
     }
 
@@ -60,6 +72,7 @@ object WidgetUpdateCoordinator {
             ExistingWorkPolicy.REPLACE,
             request,
         )
+        refreshAstronomyNow(context)
         ensurePeriodic(context)
     }
 
@@ -68,9 +81,12 @@ object WidgetUpdateCoordinator {
             val manager = GlanceAppWidgetManager(context)
             val ids = manager.getGlanceIds(SolarWeatherWidget::class.java)
             if (ids.isEmpty()) {
-                WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_PERIODIC)
-                WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_TIMELINE_PERIODIC)
-                WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_ONCE_ALL)
+                val workManager = WorkManager.getInstance(context)
+                workManager.cancelUniqueWork(UNIQUE_PERIODIC)
+                workManager.cancelUniqueWork(UNIQUE_TIMELINE_PERIODIC)
+                workManager.cancelUniqueWork(UNIQUE_ONCE_ALL)
+                workManager.cancelUniqueWork(UNIQUE_ASTRONOMY_ONCE)
+                AstronomyRefreshScheduler.cancel(context)
             }
         }
     }
@@ -78,13 +94,18 @@ object WidgetUpdateCoordinator {
 
 class WidgetBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action == Intent.ACTION_BOOT_COMPLETED ||
-            intent?.action == Intent.ACTION_MY_PACKAGE_REPLACED ||
-            intent?.action == Intent.ACTION_TIMEZONE_CHANGED ||
-            intent?.action == Intent.ACTION_TIME_CHANGED ||
-            intent?.action == Intent.ACTION_DATE_CHANGED
-        ) {
-            WidgetUpdateCoordinator.refreshNow(context)
+        when (intent?.action) {
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            -> WidgetUpdateCoordinator.refreshNow(context)
+
+            Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_DATE_CHANGED,
+            -> {
+                WidgetUpdateCoordinator.refreshAstronomyNow(context)
+                WidgetUpdateCoordinator.ensurePeriodic(context)
+            }
         }
     }
 }
