@@ -242,14 +242,14 @@ object SolarLunarTimelineRenderer {
         canvas.drawCircle(x, y, innerRadius, dotPaint)
 
         val timePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFFFFFFFF.toInt()
+            this.color = 0xFFFFFFFF.toInt()
             textSize = h * if (compact) 0.235f else metrics.anchorTimeTextFraction
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             textAlign = Paint.Align.CENTER
             setShadowLayer(h * 0.018f, 0f, h * 0.012f, 0x99000000.toInt())
         }
         val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFF94A3B8.toInt()
+            this.color = 0xFF94A3B8.toInt()
             textSize = h * if (compact) 0.14f else metrics.anchorLabelTextFraction
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             textAlign = Paint.Align.CENTER
