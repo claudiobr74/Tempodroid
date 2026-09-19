@@ -54,6 +54,10 @@
         </receiver>
 
         <receiver
+            android:name=".widget.WidgetAstronomyAlarmReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".widget.WidgetBootReceiver"
             android:exported="false">
             <intent-filter>
