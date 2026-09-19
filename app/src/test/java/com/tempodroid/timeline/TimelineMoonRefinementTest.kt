@@ -71,22 +71,26 @@ class TimelineMoonRefinementTest {
     }
 
     @Test
-    fun visualProjectionMatchesV2SunriseAndSunsetAnchors() {
-        val sunrise = SolarLunarTimelineRenderer.visualPosition(LocalTime.of(6, 11))
-        val sunset = SolarLunarTimelineRenderer.visualPosition(LocalTime.of(18, 13))
-        assertEquals(0.13f, sunrise, 0.02f)
-        assertEquals(0.78f, sunset, 0.02f)
-        assertTrue(sunrise < sunset)
+    fun visualProjectionMatchesCanonicalSection09Checkpoints() {
+        assertEquals(0.133f, SolarLunarTimelineRenderer.visualPosition(LocalTime.of(6, 11)), 0.004f)
+        assertEquals(0.351f, SolarLunarTimelineRenderer.visualPosition(LocalTime.of(10, 30)), 0.004f)
+        assertEquals(0.581f, SolarLunarTimelineRenderer.visualPosition(LocalTime.of(15, 30)), 0.004f)
+        assertEquals(0.788f, SolarLunarTimelineRenderer.visualPosition(LocalTime.of(18, 13)), 0.004f)
+        assertEquals(0.819f, SolarLunarTimelineRenderer.visualPosition(LocalTime.of(19, 0)), 0.004f)
+        assertEquals(0.905f, SolarLunarTimelineRenderer.visualPosition(LocalTime.of(22, 30)), 0.004f)
     }
 
     @Test
-    fun v2MetricsMakeSolarAnchorsAndTimesReadable() {
+    fun v2MetricsMirrorFigmaViewportDimensions() {
         val metrics = SolarLunarTimelineRenderer.visualMetrics
-        assertTrue(metrics.sunriseOuterDiameterFraction >= 0.26f)
-        assertTrue(metrics.anchorTimeTextFraction >= 0.24f)
-        assertTrue(metrics.nowBadgeDiameterFraction >= 0.44f)
-        assertTrue(metrics.nowIconFractionOfBadge >= 0.60f)
-        assertTrue(metrics.anchorTimeTextFraction > metrics.anchorLabelTextFraction)
+        assertEquals(22f / 80f, metrics.sunriseOuterDiameterFraction, 0.0001f)
+        assertEquals(16f / 80f, metrics.sunriseInnerDiameterFraction, 0.0001f)
+        assertEquals(13f / 80f, metrics.anchorTimeTextFraction, 0.0001f)
+        assertEquals(9f / 80f, metrics.anchorLabelTextFraction, 0.0001f)
+        assertEquals(44f / 80f, metrics.nowBadgeDiameterFraction, 0.0001f)
+        assertEquals(28f / 44f, metrics.nowIconFractionOfBadge, 0.0001f)
+        assertEquals(11f / 80f, metrics.nowTimeTextFraction, 0.0001f)
+        assertEquals(10f / 80f, metrics.nowLabelTextFraction, 0.0001f)
     }
 
     @Test
