@@ -22,6 +22,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Inspect canonical section 09 raw assets
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/figma-section09
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/646c1b29-eebb-4ebc-94eb-06907d5deaa1' -o /tmp/figma-section09/clear_day_1.jpeg
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/4237730b-be04-4c0c-ad79-af6c6924fe89' -o /tmp/figma-section09/clear_day_2.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/5893d493-a9ed-4229-b36b-3500942cd6ab' -o /tmp/figma-section09/partly_1756_1.jpeg
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/3cd264a2-442e-4488-9599-8dff5dac4471' -o /tmp/figma-section09/partly_1756_2.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/3ab47004-96d5-45c2-864e-cf7821244970' -o /tmp/figma-section09/sunset_1805_1.jpeg
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/6843c1b5-086f-4267-90d0-44cd3d8c5aa2' -o /tmp/figma-section09/sunset_1805_2.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/85b68fd5-7f13-496b-865a-39428e646ac5' -o /tmp/figma-section09/clear_night_2230_1.jpeg
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/f2aa9148-75f9-4835-8238-d6916805074f' -o /tmp/figma-section09/clear_night_2230_2.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/3a6ccea2-7d1a-415e-a76d-ff5fd014e501' -o /tmp/figma-section09/rain_1530_1.jpeg
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/96f93080-91f9-4ad2-b42f-08c7d6397251' -o /tmp/figma-section09/rain_1530_2.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/15c8bf81-253f-4276-bb2c-de0a4b4bb78a' -o /tmp/figma-section09/storm_1900_1.jpeg
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/83541a73-9ce7-4f7d-9623-e25dfdabb693' -o /tmp/figma-section09/storm_1900_2.png
+          file /tmp/figma-section09/*
+          sha256sum /tmp/figma-section09/*
+          command -v identify >/dev/null && identify /tmp/figma-section09/* || true
+
+      - name: Upload canonical section 09 raw assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: figma-section09-raw-assets
+          path: /tmp/figma-section09/*
+          if-no-files-found: error
+          retention-days: 2
+
       - name: Set up JDK 21
         uses: actions/setup-java@v6
         with:
