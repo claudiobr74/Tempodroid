@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.core.view.WindowCompat
 import com.tempodroid.di.AppContainer
 import com.tempodroid.widget.SolarWeatherWidgetReceiver
 import com.tempodroid.widget.SolarWeatherWidgetState
@@ -29,6 +30,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        window.statusBarColor = android.graphics.Color.WHITE
+        window.navigationBarColor = android.graphics.Color.WHITE
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
+
         WidgetUpdateCoordinator.refreshNow(this)
 
         setContent {
@@ -85,7 +94,7 @@ class MainActivity : ComponentActivity() {
                 networkLabel = currentNetworkLabel()
             }
 
-            TempodroidControlApp(
+            TempodroidLightControlApp(
                 primaryState = primaryState,
                 primaryWidgetId = primaryWidgetId,
                 installedWidgets = installedWidgets,
