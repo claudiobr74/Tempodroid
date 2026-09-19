@@ -22,6 +22,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Materialize canonical Figma v2 backgrounds
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/figma-v2
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/605d8d76-18b8-49ae-a667-9e16a0f34bc7.png' -o /tmp/figma-v2/figma_sky_clear_day.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/6eac2700-dbb9-45d7-b34f-970f1e955135.png' -o /tmp/figma-v2/figma_sky_partly_cloudy.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/232e61b9-1fc7-4f5b-baa9-7a1b2467018d.png' -o /tmp/figma-v2/figma_sky_cloudy.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/375f864c-450e-47eb-9555-8cd05adb409d.png' -o /tmp/figma-v2/figma_sky_rain.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/1e157a0b-ab3a-47be-9b51-3db21f232c87.png' -o /tmp/figma-v2/figma_sky_storm.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/7571eda6-62c1-43dd-a647-6d92972d656f.png' -o /tmp/figma-v2/figma_sky_sunrise.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/9b879b14-0fe7-4027-8cdf-bb8fbc13a2ed.png' -o /tmp/figma-v2/figma_sky_sunset.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/4fad58f2-5921-448c-b8e7-d0cbda986db5.png' -o /tmp/figma-v2/figma_sky_clear_night.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/0dd140c5-ff69-4a9e-b81a-c1ffee82cb3f.png' -o /tmp/figma-v2/figma_sky_cloudy_night.png
+          curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/994c2844-5bc5-4218-b5a1-d060ece09272.png' -o /tmp/figma-v2/figma_sky_rain_night.png
+          file /tmp/figma-v2/*
+          sha256sum /tmp/figma-v2/*
+
+      - name: Upload canonical Figma v2 backgrounds
+        uses: actions/upload-artifact@v7
+        with:
+          name: figma-v2-raw-backgrounds
+          path: /tmp/figma-v2/*.png
+          if-no-files-found: error
+          retention-days: 2
+
       - name: Set up JDK 21
         uses: actions/setup-java@v6
         with:
