@@ -31,7 +31,8 @@ object WidgetUpdateCoordinator {
             weatherRequest,
         )
 
-        // Redraw visual sem rede para manter o marcador "Agora" acompanhando o relógio.
+        // O horário textual de Agora é um TextClock nativo. Este worker continua
+        // atualizando apenas a posição astronômica/visual do marcador sem rede.
         val timelineRequest = PeriodicWorkRequestBuilder<TimelineUpdateWorker>(15, TimeUnit.MINUTES).build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             UNIQUE_TIMELINE_PERIODIC,
@@ -40,7 +41,6 @@ object WidgetUpdateCoordinator {
         )
     }
 
-    /** Atualiza todas as instâncias ativas usando um único Worker. */
     fun refreshNow(context: Context) {
         val request = OneTimeWorkRequestBuilder<WeatherUpdateWorker>().build()
         WorkManager.getInstance(context).enqueueUniqueWork(
@@ -51,7 +51,6 @@ object WidgetUpdateCoordinator {
         ensurePeriodic(context)
     }
 
-    /** Atualiza somente a instância informada, sem criar job periódico por widget. */
     fun refreshWidget(context: Context, appWidgetId: Int) {
         val request = OneTimeWorkRequestBuilder<WeatherUpdateWorker>()
             .setInputData(workDataOf(KEY_APP_WIDGET_ID to appWidgetId))
@@ -82,6 +81,7 @@ class WidgetBootReceiver : BroadcastReceiver() {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED ||
             intent?.action == Intent.ACTION_MY_PACKAGE_REPLACED ||
             intent?.action == Intent.ACTION_TIMEZONE_CHANGED ||
+            intent?.action == Intent.ACTION_TIME_CHANGED ||
             intent?.action == Intent.ACTION_DATE_CHANGED
         ) {
             WidgetUpdateCoordinator.refreshNow(context)
