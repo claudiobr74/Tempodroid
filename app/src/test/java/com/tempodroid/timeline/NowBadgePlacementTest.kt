@@ -38,6 +38,33 @@ class NowBadgePlacementTest {
     }
 
     @Test
+    fun afterSunsetSpatialCollisionFloatsBadgeUpAndRight() {
+        val sunsetX = 270f
+        val markerX = 278f
+        val markerY = 54f
+
+        val placement = SolarLunarTimelineRenderer.collisionAdjustedPlacement(
+            desiredCenterX = 278f,
+            desiredCenterY = 46f,
+            markerX = markerX,
+            markerY = markerY,
+            sunriseX = 50f,
+            sunsetX = sunsetX,
+            diameter = 44f,
+            left = 10f,
+            right = 340f,
+            h = 80,
+            now = LocalTime.of(19, 0),
+            sunrise = LocalTime.of(6, 11),
+            sunset = LocalTime.of(18, 13),
+        )
+
+        assertTrue(placement.displaced)
+        assertTrue(placement.centerX > sunsetX)
+        assertTrue(placement.centerY < markerY)
+    }
+
+    @Test
     fun nearSunriseBadgeFloatsUpAndRight() {
         val sunriseX = 50f
         val markerX = 52f
@@ -61,6 +88,33 @@ class NowBadgePlacementTest {
 
         assertTrue(placement.displaced)
         assertTrue(placement.centerX > sunriseX)
+        assertTrue(placement.centerY < markerY)
+    }
+
+    @Test
+    fun clippedMidnightBadgeFloatsUpAndAwayFromSunriseLabels() {
+        val sunriseX = 101f
+        val markerX = 28f
+        val markerY = 58f
+
+        val placement = SolarLunarTimelineRenderer.collisionAdjustedPlacement(
+            desiredCenterX = 59f,
+            desiredCenterY = 48f,
+            markerX = markerX,
+            markerY = markerY,
+            sunriseX = sunriseX,
+            sunsetX = 470f,
+            diameter = 44f,
+            left = 27f,
+            right = 580f,
+            h = 80,
+            now = LocalTime.of(0, 5),
+            sunrise = LocalTime.of(6, 11),
+            sunset = LocalTime.of(18, 13),
+        )
+
+        assertTrue(placement.displaced)
+        assertTrue(placement.centerX < sunriseX)
         assertTrue(placement.centerY < markerY)
     }
 
