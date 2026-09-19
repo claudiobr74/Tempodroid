@@ -458,8 +458,14 @@ object SolarLunarTimelineRenderer {
         }
         val labelBaseline = max(nowLabelPaint.textSize, centerY - radius - h * 0.040f)
         val timeBaseline = min(h - h * 0.020f, centerY + radius + timePaint.textSize * 1.05f)
+        val preSunriseEdgeCollision = placement.displaced && markerX < sunriseX && adjustedX < sunriseX
+        val timeTextX = if (preSunriseEdgeCollision) {
+            (adjustedX - diameter * 0.20f).coerceAtLeast(left + diameter * 0.40f)
+        } else {
+            adjustedX
+        }
         canvas.drawText("Agora", adjustedX, labelBaseline, nowLabelPaint)
-        canvas.drawText(label, adjustedX, timeBaseline, timePaint)
+        canvas.drawText(label, timeTextX, timeBaseline, timePaint)
     }
 
     internal fun calculateNowMarkerLayout(
