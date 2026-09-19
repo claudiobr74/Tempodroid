@@ -136,6 +136,34 @@ class WidgetRefinementPreviewTest {
                 moonIllumination = 0.72,
                 moonPosition = CelestialPosition(0.62f, 0.28f, true),
             ),
+            PreviewCase(
+                fileName = "07-near-sunset-1810.png",
+                time = LocalTime.of(18, 10),
+                condition = WeatherCondition.PARTLY_CLOUDY,
+                temperature = 27,
+                high = 31,
+                low = 17,
+                rainChance = 15,
+                cloudCover = 38,
+                precipitation = 0.0,
+                moonPhase = MoonPhase.WAXING_CRESCENT,
+                moonIllumination = 0.32,
+                moonPosition = CelestialPosition(0.50f, 0.23f, true),
+            ),
+            PreviewCase(
+                fileName = "08-clear-night-0005.png",
+                time = LocalTime.of(0, 5),
+                condition = WeatherCondition.CLEAR,
+                temperature = 20,
+                high = 30,
+                low = 18,
+                rainChance = 5,
+                cloudCover = 2,
+                precipitation = 0.0,
+                moonPhase = MoonPhase.FULL_MOON,
+                moonIllumination = 1.0,
+                moonPosition = CelestialPosition(0.32f, 0.20f, true),
+            ),
         )
 
         val rendered = cases.map { preview ->
@@ -167,7 +195,7 @@ class WidgetRefinementPreviewTest {
             bitmap
         }
 
-        val contactSheet = Bitmap.createBitmap(960, 960, Bitmap.Config.ARGB_8888)
+        val contactSheet = Bitmap.createBitmap(960, 1280, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(contactSheet)
         canvas.drawColor(Color.rgb(9, 14, 23))
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
@@ -250,14 +278,14 @@ class WidgetRefinementPreviewTest {
 
         val timeline = SolarLunarTimelineRenderer.render(
             widthPx = width - 32,
-            heightPx = 100,
+            heightPx = 104,
             state = state,
             now = time,
             compact = false,
             moonSurface = moonTexture,
             panelDarknessAlpha = 64,
         )
-        canvas.drawBitmap(timeline, 16f, 164f, null)
+        canvas.drawBitmap(timeline, 16f, 158f, null)
 
         val summary = "Máx ${state.high}° · Mín ${state.low}° · ${state.rainChance}% chuva"
         val summaryPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
