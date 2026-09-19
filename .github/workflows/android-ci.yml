@@ -35,42 +35,22 @@ jobs:
       - name: Make Gradle executable
         run: chmod +x ./gradlew
 
-      - name: Tests, lint, debug build and release bundle
-        run: ./gradlew :core:test :app:test :app:lintRelease :app:assembleDebug :app:bundleRelease --stacktrace
+      - name: Tests, lint and debug build
+        run: ./gradlew :core:test :app:test :app:lintRelease :app:assembleDebug --stacktrace
+
+      - name: Release bundle validation on main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: ./gradlew :app:bundleRelease --stacktrace
 
       - name: Verify Play package
         run: |
           grep -q '"applicationId": "com.tempodroid.myapp"' app/build/outputs/apk/debug/output-metadata.json
 
       - name: Upload timeline and moon previews
+        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: timeline-moon-previews
           path: app/build/reports/timeline-moon-previews/*.png
           if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload installable debug APK
-        uses: actions/upload-artifact@v7
-        with:
-          name: tempodroid-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-          archive: false
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload release AAB validation artifact
-        uses: actions/upload-artifact@v7
-        with:
-          path: app/build/outputs/bundle/release/app-release.aab
-          archive: false
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Preserve R8 mapping
-        uses: actions/upload-artifact@v7
-        with:
-          name: r8-mapping-validation
-          path: app/build/outputs/mapping/release/mapping.txt
-          if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
