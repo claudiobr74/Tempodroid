@@ -9,14 +9,14 @@ import android.graphics.RectF
 import com.tempodroid.astronomy.MoonRenderStyle
 import com.tempodroid.ui.WidgetDimensions
 import com.tempodroid.weather.WeatherCondition
+import kotlin.math.sqrt
 
 /**
  * Renderer visual alinhado ao arquivo final do Figma.
  *
  * A camada base usa os dez rasters originais de DynamicSkyBackground. Sol,
  * nuvens, chuva, atmosfera e estrelas já fazem parte desses assets. A Lua
- * permanece astronômica/dinâmica, usando a textura, opacidades e escalas
- * extraídas das variantes MoonWeatherSky.
+ * permanece astronômica/dinâmica e usa a textura fotográfica MoonVisual.
  */
 object DynamicSkyRenderer {
 
@@ -35,7 +35,9 @@ object DynamicSkyRenderer {
 
         val moon = input.moonPosition
         val moonVisibility = if (moon?.aboveHorizon == true) {
-            FigmaVisualStateResolver.moonOpacity(period, input.weatherCondition)
+            photographicMoonVisibility(
+                FigmaVisualStateResolver.moonOpacity(period, input.weatherCondition),
+            )
         } else {
             0f
         }
@@ -43,8 +45,6 @@ object DynamicSkyRenderer {
         if (moon != null && moonVisibility > 0f) {
             val moonX = moon.normalizedX * w
             val moonY = moon.normalizedY * h * 0.70f
-            // MoonVisual ocupa 48/58/66px no frame Figma de 160px. O disco
-            // texturizado ocupa 68% do componente (radius = 34%).
             val moonComponentSize = h * FigmaVisualStateResolver.moonComponentSizeFraction(period)
             val radius = moonComponentSize * 0.34f
             MoonRenderer.draw(
@@ -72,11 +72,19 @@ object DynamicSkyRenderer {
             )
         }
 
-        // Mede o bitmap já composto (incluindo Lua/oclusão) e protege apenas
-        // as regiões reais de texto. As imagens-fonte do Figma permanecem
-        // intactas e o scrim varia continuamente conforme a luminância local.
         TextProtectionOverlay.draw(canvas, bitmap, w, h)
         return bitmap
+    }
+
+    /**
+     * As opacidades do Figma continuam sendo a fonte de verdade, mas alpha
+     * linear subexpõe uma textura lunar real sobre um céu claro. A curva sqrt
+     * preserva 0 e 1 e recupera contraste nos valores intermediários sem
+     * transformar a Lua diurna em um disco opaco.
+     */
+    internal fun photographicMoonVisibility(baseOpacity: Float): Float {
+        val base = baseOpacity.coerceIn(0f, 1f)
+        return if (base <= 0f) 0f else sqrt(base)
     }
 
     private fun drawCenterCrop(canvas: Canvas, source: Bitmap, width: Int, height: Int) {
