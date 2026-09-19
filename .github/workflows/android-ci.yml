@@ -7,7 +7,7 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-ci-${{ github.ref }}
@@ -38,6 +38,19 @@ jobs:
           curl -L --fail --retry 3 'https://www.figma.com/api/mcp/asset/994c2844-5bc5-4218-b5a1-d060ece09272.png' -o /tmp/figma-v2/figma_sky_rain_night.png
           file /tmp/figma-v2/*
           sha256sum /tmp/figma-v2/*
+
+      - name: Persist canonical Figma v2 backgrounds on PR branch
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          cp /tmp/figma-v2/*.png app/src/main/res/drawable-nodpi/
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/res/drawable-nodpi/figma_sky_*.png
+          if ! git diff --cached --quiet; then
+            git commit -m 'Atualiza backgrounds canônicos do Figma v2'
+            git push origin HEAD:${{ github.head_ref }}
+          fi
 
       - name: Upload canonical Figma v2 backgrounds
         uses: actions/upload-artifact@v7
