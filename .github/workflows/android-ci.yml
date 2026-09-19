@@ -9,15 +9,19 @@ on:
 permissions:
   contents: read
 
+# POLÍTICA DE CUSTO (GitHub Free / repositório privado)
+# - Não executar CI a cada commit/synchronize.
+# - Manter o PR como draft durante a implementação.
+# - Rodar uma única validação final ao marcar o PR como ready for review.
+# - Para repetir uma validação, usar workflow_dispatch conscientemente.
+# - APK/AAB e mapping pertencem ao workflow de release manual.
+
 concurrency:
   group: android-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-and-test:
-    # No plano GitHub Free, este workflow roda somente uma vez quando o PR
-    # sai de draft ou quando for disparado manualmente. Evita gastar minutos
-    # a cada commit/synchronize durante o desenvolvimento.
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
