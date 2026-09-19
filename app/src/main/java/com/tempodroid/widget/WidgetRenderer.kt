@@ -20,10 +20,16 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
+data class WidgetNowClockPlacement(
+    val centerXFraction: Float,
+    val topFraction: Float,
+)
+
 data class WidgetBitmaps(
     val sky: Bitmap,
     val timeline: Bitmap,
     val mode: WidgetLayoutMode,
+    val nowClockPlacement: WidgetNowClockPlacement? = null,
 )
 
 object WidgetRenderer {
@@ -118,16 +124,42 @@ object WidgetRenderer {
             moonSurface = moonSurface,
         )
         val timelineGlassAlpha = TextProtectionOverlay.timelineGlassAlpha(sky)
+        val timelineWidthPx = w - (32 * density).toInt()
+        val timelineHeightPx = (WidgetDimensions.TIMELINE_HEIGHT_DP * density).toInt().coerceAtLeast(48)
+        val compact = mode == WidgetLayoutMode.COMPACT
         val timeline = SolarLunarTimelineRenderer.render(
-            widthPx = w - (32 * density).toInt(),
-            heightPx = (WidgetDimensions.TIMELINE_HEIGHT_DP * density).toInt().coerceAtLeast(48),
+            widthPx = timelineWidthPx,
+            heightPx = timelineHeightPx,
             state = renderState,
             now = now,
-            compact = mode == WidgetLayoutMode.COMPACT,
+            compact = compact,
             moonSurface = moonSurface,
             panelDarknessAlpha = timelineGlassAlpha,
+            // No widget real, o texto da hora é um TextClock nativo e nunca fica stale.
+            drawNowTime = !useLiveAstronomy,
         )
-        val result = WidgetBitmaps(sky = sky, timeline = timeline, mode = mode)
+        val nowClockPlacement = if (useLiveAstronomy) {
+            SolarLunarTimelineRenderer.nowClockOverlayPlacement(
+                widthPx = timelineWidthPx,
+                heightPx = timelineHeightPx,
+                state = renderState,
+                now = now,
+                compact = compact,
+            ).let {
+                WidgetNowClockPlacement(
+                    centerXFraction = it.centerXFraction,
+                    topFraction = it.topFraction,
+                )
+            }
+        } else {
+            null
+        }
+        val result = WidgetBitmaps(
+            sky = sky,
+            timeline = timeline,
+            mode = mode,
+            nowClockPlacement = nowClockPlacement,
+        )
         cache.put(key, result)
         return result
     }
