@@ -20,12 +20,14 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import java.io.FileOutputStream
 import java.time.LocalTime
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class WidgetRefinementPreviewTest {
 
     private data class PreviewCase(
