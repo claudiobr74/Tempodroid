@@ -43,10 +43,11 @@ object WidgetRenderer {
         val mode = WidgetLayout.mode(widthDp, heightDp)
         val (w, h) = WidgetDimensions.clampBitmapSize(widthPx, heightPx)
         val zone = runCatching { ZoneId.of(state.timezoneId) }.getOrDefault(ZoneId.systemDefault())
-        val now = state.displayTime ?: LocalTime.now(zone)
+        val liveNow = LocalTime.now(zone)
+        val now = resolveRenderTime(state, useLiveAstronomy, liveNow)
         val localDate = LocalDate.now(zone)
         val key = listOf(
-            w, h, mode, localDate, now.hour, now.minute / 10, useLiveAstronomy,
+            w, h, mode, localDate, now.hour, now.minute, useLiveAstronomy,
             state.condition, state.moonPhase, state.moonIllumination,
             state.cloudCover, state.weatherCode, state.precipitation,
             state.sunrise, state.sunset, state.city, state.isStale, state.hasWeatherError,
@@ -130,6 +131,17 @@ object WidgetRenderer {
         cache.put(key, result)
         return result
     }
+
+    /**
+     * O widget real deve seguir o relógio do aparelho/fuso configurado. displayTime
+     * é uma ferramenta de simulação usada apenas quando a astronomia ao vivo está
+     * desativada (prévia do App Control e testes visuais).
+     */
+    internal fun resolveRenderTime(
+        state: SolarWeatherWidgetState,
+        useLiveAstronomy: Boolean,
+        liveNow: LocalTime,
+    ): LocalTime = if (useLiveAstronomy) liveNow else state.displayTime ?: liveNow
 
     fun placeholder(widthPx: Int, heightPx: Int): Bitmap {
         val (w, h) = WidgetDimensions.clampBitmapSize(widthPx, heightPx)
