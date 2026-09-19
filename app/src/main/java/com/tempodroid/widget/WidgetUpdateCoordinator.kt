@@ -10,6 +10,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.tempodroid.workers.TimelineUpdateWorker
 import com.tempodroid.workers.WeatherUpdateWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,15 +19,24 @@ import java.util.concurrent.TimeUnit
 
 object WidgetUpdateCoordinator {
     const val UNIQUE_PERIODIC = "solar_weather_widget_periodic"
+    const val UNIQUE_TIMELINE_PERIODIC = "solar_weather_widget_timeline_periodic"
     const val UNIQUE_ONCE_ALL = "solar_weather_widget_once_all"
     const val KEY_APP_WIDGET_ID = "app_widget_id"
 
     fun ensurePeriodic(context: Context) {
-        val request = PeriodicWorkRequestBuilder<WeatherUpdateWorker>(30, TimeUnit.MINUTES).build()
+        val weatherRequest = PeriodicWorkRequestBuilder<WeatherUpdateWorker>(30, TimeUnit.MINUTES).build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             UNIQUE_PERIODIC,
             ExistingPeriodicWorkPolicy.KEEP,
-            request,
+            weatherRequest,
+        )
+
+        // Redraw visual sem rede para manter o marcador "Agora" acompanhando o relógio.
+        val timelineRequest = PeriodicWorkRequestBuilder<TimelineUpdateWorker>(15, TimeUnit.MINUTES).build()
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            UNIQUE_TIMELINE_PERIODIC,
+            ExistingPeriodicWorkPolicy.KEEP,
+            timelineRequest,
         )
     }
 
@@ -60,6 +70,7 @@ object WidgetUpdateCoordinator {
             val ids = manager.getGlanceIds(SolarWeatherWidget::class.java)
             if (ids.isEmpty()) {
                 WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_PERIODIC)
+                WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_TIMELINE_PERIODIC)
                 WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_ONCE_ALL)
             }
         }
