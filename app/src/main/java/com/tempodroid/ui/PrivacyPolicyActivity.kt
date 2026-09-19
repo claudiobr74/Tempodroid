@@ -13,15 +13,34 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 
 class PrivacyPolicyActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        window.statusBarColor = android.graphics.Color.WHITE
+        window.navigationBarColor = android.graphics.Color.WHITE
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
+
         setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+            MaterialTheme(
+                colorScheme = lightColorScheme(
+                    background = Color(0xFFF7F9FC),
+                    surface = Color.White,
+                    primary = Color(0xFF0284C7),
+                    onBackground = Color(0xFF111827),
+                    onSurface = Color(0xFF111827),
+                ),
+            ) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -50,7 +69,7 @@ class PrivacyPolicyActivity : ComponentActivity() {
                         )
                         Text("Publicidade e analytics", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "A versão 1.0.0 não possui anúncios, login, analytics, perfil comportamental nem venda de dados pessoais.",
+                            "O Tempodroid não possui anúncios, login, analytics, perfil comportamental nem venda de dados pessoais.",
                         )
                         Text("Exclusão", style = MaterialTheme.typography.titleMedium)
                         Text(
