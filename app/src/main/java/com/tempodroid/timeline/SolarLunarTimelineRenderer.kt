@@ -20,6 +20,7 @@ import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * Timeline híbrida premium.
@@ -37,6 +38,12 @@ object SolarLunarTimelineRenderer {
         val bubbleWidth: Float,
         val bubbleHeight: Float,
         val bubbleCenterY: Float = bubbleTop + bubbleHeight / 2f,
+    )
+
+    internal data class NowBadgePlacement(
+        val centerX: Float,
+        val centerY: Float,
+        val displaced: Boolean,
     )
 
     internal data class TimelineVisualMetrics(
@@ -351,40 +358,53 @@ object SolarLunarTimelineRenderer {
             arcRise = arcRise,
             markerYOverride = markerY,
         )
-        val adjustedX = collisionAdjustedCenter(
+        val radius = diameter / 2f
+        val defaultCenterY = (markerY - radius * 0.28f).coerceIn(
+            radius + h * 0.13f,
+            h - radius - h * 0.17f,
+        )
+        val placement = collisionAdjustedPlacement(
             desiredCenterX = layoutBase.bubbleCenterX,
+            desiredCenterY = defaultCenterY,
             markerX = markerX,
+            markerY = markerY,
             sunriseX = sunriseX,
             sunsetX = sunsetX,
             diameter = diameter,
             left = left,
             right = right,
+            h = h,
             now = now,
             sunrise = sunrise,
             sunset = sunset,
         )
-        val radius = diameter / 2f
-        val desiredCenterY = markerY - radius * 0.28f
-        val centerY = desiredCenterY.coerceIn(
-            radius + h * 0.13f,
-            h - radius - h * 0.17f,
-        )
+        val adjustedX = placement.centerX
+        val centerY = placement.centerY
         val accent = TimelineWeatherMarkerRenderer.bubbleAccent(period)
 
         val connectorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = withAlpha(accent, 190)
+            color = withAlpha(accent, if (placement.displaced) 210 else 150)
             style = Paint.Style.STROKE
             strokeWidth = max(1.2f, h * 0.013f)
             strokeCap = Paint.Cap.ROUND
         }
         val deltaX = markerX - adjustedX
         val deltaY = markerY - centerY
-        if (abs(deltaX) > radius * 0.15f || abs(deltaY) > radius * 0.75f) {
-            val startY = centerY + radius * 0.70f
-            canvas.drawLine(adjustedX, startY, markerX, markerY, connectorPaint)
+        val distance = sqrt(deltaX * deltaX + deltaY * deltaY)
+        if (distance > radius * 0.82f) {
+            val safeDistance = distance.coerceAtLeast(0.001f)
+            val startX = adjustedX + (deltaX / safeDistance) * radius * 0.80f
+            val startY = centerY + (deltaY / safeDistance) * radius * 0.80f
+            canvas.drawLine(startX, startY, markerX, markerY, connectorPaint)
         }
-        canvas.drawCircle(markerX, markerY, max(2f, h * 0.022f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = withAlpha(accent, 235)
+
+        val anchorHalo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = withAlpha(accent, if (placement.displaced) 70 else 38)
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(markerX, markerY, max(4f, h * 0.036f), anchorHalo)
+        canvas.drawCircle(markerX, markerY, max(2f, h * 0.021f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = withAlpha(accent, 245)
             style = Paint.Style.FILL
         })
 
@@ -474,42 +494,66 @@ object SolarLunarTimelineRenderer {
     }
 
     /**
-     * O ponto cronológico nunca se move. Apenas o centro visual do badge pode
-     * deslocar-se quando o Agora fica muito próximo de Nascer ou Ocaso.
+     * Preserva o ponto cronológico na curva e desloca apenas o badge quando há
+     * colisão com Nascer/Ocaso. Perto do Ocaso o callout sobe e vai à esquerda;
+     * perto do Nascer, sobe e vai à direita.
      */
-    private fun collisionAdjustedCenter(
+    internal fun collisionAdjustedPlacement(
         desiredCenterX: Float,
+        desiredCenterY: Float,
         markerX: Float,
+        markerY: Float,
         sunriseX: Float,
         sunsetX: Float,
         diameter: Float,
         left: Float,
         right: Float,
+        h: Int,
         now: LocalTime,
         sunrise: LocalTime,
         sunset: LocalTime,
-    ): Float {
-        var result = desiredCenterX
+    ): NowBadgePlacement {
+        var centerX = desiredCenterX
+        var centerY = desiredCenterY
+        var displaced = false
+
         val nowMinutes = minuteOf(now)
         val riseMinutes = minuteOf(sunrise)
         val setMinutes = minuteOf(sunset)
         val minutesFromSunrise = nowMinutes - riseMinutes
         val minutesUntilSunset = setMinutes - nowMinutes
-        val threshold = diameter * 1.12f
+        val threshold = diameter * 1.16f
 
-        if (minutesFromSunrise in -18..18 && abs(markerX - sunriseX) < threshold) {
-            result = sunriseX + diameter * 1.02f
-        }
-        if (minutesUntilSunset in 10..28 && abs(markerX - sunsetX) < threshold * 1.4f) {
-            result = sunsetX - diameter * 1.05f
-        } else if (minutesUntilSunset in -4..9 && abs(markerX - sunsetX) < threshold * 1.4f) {
-            result = sunsetX + diameter * 0.88f
+        val nearSunrise =
+            minutesFromSunrise in -18..18 && abs(markerX - sunriseX) < threshold * 1.45f
+        val nearSunset =
+            minutesUntilSunset in -6..30 && abs(markerX - sunsetX) < threshold * 1.55f
+
+        when {
+            nearSunrise -> {
+                centerX = sunriseX + diameter * 1.12f
+                centerY = markerY - diameter * 0.78f
+                displaced = true
+            }
+            nearSunset -> {
+                val critical = minutesUntilSunset in -6..9
+                centerX = sunsetX - diameter * if (critical) 1.28f else 1.12f
+                centerY = markerY - diameter * if (critical) 0.88f else 0.72f
+                displaced = true
+            }
         }
 
         val radius = diameter / 2f
-        val minCenter = left + radius + diameter * 0.10f
-        val maxCenter = right - radius - diameter * 0.10f
-        return result.coerceIn(minCenter, maxCenter)
+        val minCenterX = left + radius + diameter * 0.10f
+        val maxCenterX = right - radius - diameter * 0.10f
+        val minCenterY = radius + h * 0.13f
+        val maxCenterY = h - radius - h * 0.17f
+
+        return NowBadgePlacement(
+            centerX = centerX.coerceIn(minCenterX, maxCenterX),
+            centerY = centerY.coerceIn(minCenterY, maxCenterY),
+            displaced = displaced,
+        )
     }
 
     /**
