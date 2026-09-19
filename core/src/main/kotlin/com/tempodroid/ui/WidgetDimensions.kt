@@ -8,7 +8,7 @@ object WidgetDimensions {
     const val SPACING_DP = 8
     const val MICRO_GAP_DP = 4
     const val GLASS_RADIUS_DP = 16
-    const val TIMELINE_HEIGHT_DP = 46
+    const val TIMELINE_HEIGHT_DP = 52
     const val COMPACT_WIDTH_DP = 180
     const val COMPACT_HEIGHT_DP = 110
     const val EXPANDED_WIDTH_DP = 400
