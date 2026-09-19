@@ -29,7 +29,6 @@ import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Cloud
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
@@ -559,7 +558,7 @@ private fun LightWidgetCard(
                 .padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Outlined.Delete, null, tint = LightTextSecondary, modifier = Modifier.size(16.dp))
+            Icon(Icons.Outlined.Info, null, tint = LightTextSecondary, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text("Como remover da tela inicial", color = LightTextSecondary, fontSize = 12.sp)
         }
@@ -586,7 +585,7 @@ private fun LightSettingsScreen(
     ) {
         Column {
             Text("Ajustes", fontSize = 27.sp, fontWeight = FontWeight.Bold, color = LightText)
-            Text("Apenas opções que realmente funcionam no aplicativo", color = LightTextSecondary, fontSize = 14.sp)
+            Text("Preferências e informações do Tempodroid", color = LightTextSecondary, fontSize = 14.sp)
         }
 
         LightSettingsSection("Widget") {
@@ -946,6 +945,7 @@ private fun RealWidgetPreview(
             useLiveAstronomy,
             renderToken,
         ) {
+            value = LightPreviewResult()
             value = withContext(Dispatchers.Default) {
                 runCatching {
                     WidgetRenderer.render(context, state, widthPx, heightPx, useLiveAstronomy)
