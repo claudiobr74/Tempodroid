@@ -7,6 +7,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
@@ -117,7 +118,15 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 onConfigureWidget = { id -> openWidgetConfiguration(id) },
-                onAddWidget = { requestPinWidget() },
+                onAddWidget = {
+                    if (!requestPinWidget()) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Este launcher não permite adicionar o widget por este botão. Adicione o Tempodroid pelo seletor de widgets da tela inicial.",
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                },
                 onPrivacy = {
                     startActivity(Intent(this@MainActivity, PrivacyPolicyActivity::class.java))
                 },
@@ -148,11 +157,13 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private fun requestPinWidget() {
+    private fun requestPinWidget(): Boolean {
         val manager = AppWidgetManager.getInstance(this)
         val provider = ComponentName(this, SolarWeatherWidgetReceiver::class.java)
-        if (manager.isRequestPinAppWidgetSupported) {
+        return if (manager.isRequestPinAppWidgetSupported) {
             manager.requestPinAppWidget(provider, null, null)
+        } else {
+            false
         }
     }
 
