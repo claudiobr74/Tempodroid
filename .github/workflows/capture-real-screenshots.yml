@@ -1,0 +1,75 @@
+name: Capture real app screenshots
+
+on:
+  push:
+    branches:
+      - capture/real-screenshots-v2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Build debug APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Boot emulator and capture production UI
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -euxo pipefail
+            mkdir -p screenshots
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell wm size 824x1830
+            adb shell wm density 320
+            adb shell settings put system accelerometer_rotation 0
+            adb shell settings put system user_rotation 0
+            sleep 2
+
+            capture() {
+              scenario="$1"
+              output="$2"
+              adb shell am force-stop com.tempodroid.myapp
+              adb shell am start -W -n com.tempodroid.myapp/com.tempodroid.ui.ScreenshotHarnessActivity --es scenario "$scenario"
+              sleep 5
+              adb exec-out screencap -p > "screenshots/$output"
+            }
+
+            capture clear 01-clear-day-1030-full.png
+            capture partly 02-partly-cloudy-1756-full.png
+            capture sunset 03-sunset-1805-full.png
+            capture night 04-clear-night-2230-full.png
+            capture rain 05-rain-1530-full.png
+            capture storm 06-storm-1900-full.png
+            cp screenshots/01-clear-day-1030-full.png screenshots/07-dashboard.png
+
+      - name: Upload real emulator screenshots
+        uses: actions/upload-artifact@v7
+        with:
+          name: real-app-screenshots
+          path: screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14
