@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextClock xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_timeline_clock"
+    android:layout_width="56dp"
+    android:layout_height="18dp"
+    android:gravity="center"
+    android:format12Hour="HH:mm"
+    android:format24Hour="HH:mm"
+    android:includeFontPadding="false"
+    android:shadowColor="#90000000"
+    android:shadowDx="0"
+    android:shadowDy="1"
+    android:shadowRadius="2"
+    android:textColor="@android:color/white"
+    android:textSize="11sp"
+    android:textStyle="bold" />
