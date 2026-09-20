@@ -35,8 +35,8 @@ data class CelestialPosition(
 )
 
 data class AstronomyData(
-    val sunrise: java.time.LocalTime,
-    val sunset: java.time.LocalTime,
+    val sunrise: java.time.LocalTime?,
+    val sunset: java.time.LocalTime?,
     val solarNoon: java.time.LocalTime?,
     val moonrise: java.time.LocalTime?,
     val moonset: java.time.LocalTime?,

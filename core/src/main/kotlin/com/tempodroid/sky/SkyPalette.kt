@@ -151,7 +151,7 @@ data class SkyPalette(
                 mid = mix(base.mid, 0xFF8AA8C0.toInt(), 0.18f),
                 starAlpha = (base.starAlpha * 0.7).toInt(),
             )
-            WeatherCondition.CLOUDY -> desaturate(base, 0.35f).copy(
+            WeatherCondition.CLOUDY, WeatherCondition.SNOW -> desaturate(base, 0.35f).copy(
                 zenith = mix(base.zenith, 0xFF6A7A8C.toInt(), 0.45f),
                 mid = mix(base.mid, 0xFF8A96A4.toInt(), 0.40f),
                 horizon = mix(base.horizon, 0xFF9AA4B0.toInt(), 0.35f),

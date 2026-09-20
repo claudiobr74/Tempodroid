@@ -1,6 +1,6 @@
 # Política de Privacidade — Tempodroid
 
-**Última atualização: 17 de setembro de 2026**
+**Última atualização: 20 de setembro de 2026**
 
 O Tempodroid é um aplicativo Android focado em um widget de relógio, clima e ciclo Sol/Lua. Esta política explica quais dados são usados e para quê.
 
@@ -10,7 +10,7 @@ O Tempodroid é um aplicativo Android focado em um widget de relógio, clima e c
 
 A localização aproximada é **opcional**. O Tempodroid só solicita a permissão `ACCESS_COARSE_LOCATION` quando o usuário toca em **Usar localização aproximada**.
 
-Quando autorizada, a última localização aproximada disponível no aparelho pode ser usada para definir a cidade e consultar o clima correspondente. O Tempodroid não solicita localização precisa, não usa localização em segundo plano e não mantém rastreamento contínuo.
+Quando autorizada, o aplicativo aceita apenas uma localização aproximada recente disponibilizada pelo Android. Ela pode ser usada para definir a cidade, identificar o fuso horário e consultar o clima correspondente. O Tempodroid não solicita localização precisa, não usa localização em segundo plano e não mantém rastreamento contínuo.
 
 ### Cidade e coordenadas escolhidas
 
@@ -26,9 +26,11 @@ Esses dados ficam no armazenamento local do aplicativo e não são enviados para
 
 ## Serviços externos
 
-Para fornecer previsão e condições meteorológicas, o Tempodroid envia as coordenadas da cidade selecionada para a **Open-Meteo**. A busca manual de cidades também utiliza o serviço de geocodificação da Open-Meteo, cuja base de localização utiliza dados do **GeoNames**.
+Para fornecer condições meteorológicas e, quando necessário, identificar o fuso horário da localização escolhida, o Tempodroid envia latitude e longitude para a **Open-Meteo**. A busca manual de cidades também utiliza o serviço de geocodificação da Open-Meteo, cuja base de localização utiliza dados do **GeoNames**.
 
-Esses serviços podem receber informações técnicas inerentes a uma conexão de internet, como endereço IP, conforme suas próprias políticas e termos.
+Quando o usuário escolhe a localização aproximada do aparelho, o Android também pode usar o serviço de geocodificação disponível no sistema para converter coordenadas em nome de cidade. Esse serviço pode ser fornecido pelo sistema operacional ou pelo fabricante do aparelho e está sujeito às políticas do respectivo fornecedor.
+
+Serviços externos podem receber informações técnicas inerentes à conexão de internet, como endereço IP, conforme suas próprias políticas e termos.
 
 Referências:
 
@@ -41,8 +43,9 @@ Referências:
 Os dados são usados somente para:
 
 - selecionar a localização meteorológica;
+- identificar o fuso horário correspondente;
 - obter o clima atual e o resumo diário;
-- calcular e exibir nascer e pôr do Sol;
+- calcular e exibir nascer e pôr do Sol, quando esses eventos ocorrem;
 - calcular e exibir informações da Lua;
 - manter o widget funcional mesmo temporariamente sem internet.
 
@@ -81,4 +84,4 @@ Esta política poderá ser atualizada quando houver mudança relevante no funcio
 
 Tempodroid.
 
-**Antes da publicação:** inserir aqui o endereço público de suporte/privacidade que será mantido ativo na ficha do Google Play. O endereço não é definido no código para evitar publicar contato pessoal inadvertidamente.
+O canal público de suporte e privacidade é o endereço de contato exibido na ficha oficial do Tempodroid na Google Play.

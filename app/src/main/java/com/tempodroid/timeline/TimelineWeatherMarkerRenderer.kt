@@ -20,6 +20,7 @@ object TimelineWeatherMarkerRenderer {
         CLOUD_SUN,
         CLOUD,
         RAIN,
+        SNOW,
         STORM,
         MOON,
         CLOUD_MOON,
@@ -38,6 +39,7 @@ object TimelineWeatherMarkerRenderer {
             WeatherCondition.PARTLY_CLOUDY -> if (night) Glyph.CLOUD_MOON else Glyph.CLOUD_SUN
             WeatherCondition.CLOUDY, WeatherCondition.FOG -> Glyph.CLOUD
             WeatherCondition.RAIN, WeatherCondition.HEAVY_RAIN -> Glyph.RAIN
+            WeatherCondition.SNOW -> Glyph.SNOW
             WeatherCondition.STORM -> Glyph.STORM
         }
     }
@@ -48,6 +50,7 @@ object TimelineWeatherMarkerRenderer {
             Glyph.CLOUD_SUN -> GlyphPalette(CLOUD_WHITE, SUN_GOLD, CLOUD_BLUE)
             Glyph.CLOUD -> GlyphPalette(CLOUD_WHITE, CLOUD_BLUE, CLOUD_SHADE)
             Glyph.RAIN -> GlyphPalette(RAIN_CLOUD_LIGHT, RAIN_CLOUD, RAIN_BLUE)
+            Glyph.SNOW -> GlyphPalette(SNOW_CLOUD_LIGHT, SNOW_CLOUD, SNOW_FLAKE)
             Glyph.STORM -> GlyphPalette(STORM_LIGHT, STORM_CLOUD, LIGHTNING_YELLOW)
             Glyph.MOON -> GlyphPalette(MOON_GOLD, NIGHT_CUTOUT, MOON_GOLD)
             Glyph.CLOUD_MOON -> GlyphPalette(CLOUD_WHITE, MOON_GOLD, CLOUD_BLUE)
@@ -78,6 +81,7 @@ object TimelineWeatherMarkerRenderer {
             Glyph.CLOUD_SUN -> drawCloudSun(canvas)
             Glyph.CLOUD -> drawCloud(canvas, CLOUD_WHITE, CLOUD_BLUE, CLOUD_SHADE)
             Glyph.RAIN -> drawRain(canvas)
+            Glyph.SNOW -> drawSnow(canvas)
             Glyph.STORM -> drawStorm(canvas)
             Glyph.MOON -> drawMoon(canvas)
             Glyph.CLOUD_MOON -> drawCloudMoon(canvas)
@@ -145,7 +149,6 @@ object TimelineWeatherMarkerRenderer {
     }
 
     private fun drawRain(canvas: Canvas) {
-        // Figma: nuvem azul muito clara + quatro gotas alternando #5BC8FF / #3AADFF.
         canvas.drawRoundRect(RectF(4f, 9f, 26f, 17f), 4f, 4f, fill(RAIN_CLOUD))
         canvas.drawCircle(9f, 9f, 6f, fill(RAIN_CLOUD_LIGHT))
         canvas.drawCircle(18f, 8f, 4.7f, fill(RAIN_CLOUD))
@@ -159,6 +162,20 @@ object TimelineWeatherMarkerRenderer {
                 19f + len[index],
                 stroke(if (index % 2 == 0) RAIN_BLUE_LIGHT else RAIN_BLUE, 2f),
             )
+        }
+    }
+
+    private fun drawSnow(canvas: Canvas) {
+        canvas.drawRoundRect(RectF(4f, 8f, 26f, 16f), 4f, 4f, fill(SNOW_CLOUD))
+        canvas.drawCircle(9f, 8f, 6f, fill(SNOW_CLOUD_LIGHT))
+        canvas.drawCircle(18f, 7.5f, 4.8f, fill(SNOW_CLOUD))
+        val flake = stroke(SNOW_FLAKE, 1.4f)
+        val centers = arrayOf(8f to 21f, 15f to 24f, 22f to 20.5f)
+        centers.forEach { (x, y) ->
+            canvas.drawLine(x - 2f, y, x + 2f, y, flake)
+            canvas.drawLine(x, y - 2f, x, y + 2f, flake)
+            canvas.drawLine(x - 1.4f, y - 1.4f, x + 1.4f, y + 1.4f, flake)
+            canvas.drawLine(x - 1.4f, y + 1.4f, x + 1.4f, y - 1.4f, flake)
         }
     }
 
@@ -203,6 +220,9 @@ object TimelineWeatherMarkerRenderer {
     private const val CLOUD_SHADE: Int = 0xFFB7CADF.toInt()
     private const val RAIN_CLOUD_LIGHT: Int = 0xFFE8F4FF.toInt()
     private const val RAIN_CLOUD: Int = 0xFFD0E8FF.toInt()
+    private const val SNOW_CLOUD_LIGHT: Int = 0xFFF4F8FC.toInt()
+    private const val SNOW_CLOUD: Int = 0xFFDCE8F2.toInt()
+    private const val SNOW_FLAKE: Int = 0xFFFFFFFF.toInt()
     private const val STORM_LIGHT: Int = 0xFF8FA0B8.toInt()
     private const val STORM_CLOUD: Int = 0xFF7B8EA8.toInt()
     private const val STORM_DARK: Int = 0xFF6B7E98.toInt()

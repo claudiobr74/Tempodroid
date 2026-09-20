@@ -29,10 +29,44 @@ object DynamicSkyRenderer {
         val (w, h) = WidgetDimensions.clampBitmapSize(input.widthPx, input.heightPx)
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        val period = DayPeriodCalculator.from(input.localTime, input.sunrise, input.sunset, input.solarNoon)
-        val backgroundState = FigmaVisualStateResolver.background(period, input.weatherCondition)
-        val background = FigmaVisualAssets.sky(context, backgroundState)
-        drawCenterCrop(canvas, background, w, h)
+        val sunrise = input.sunrise
+        val sunset = input.sunset
+        val period = DayPeriodCalculator.from(
+            now = input.localTime,
+            sunrise = sunrise,
+            sunset = sunset,
+            solarNoon = input.solarNoon,
+            sunAboveHorizon = input.sunPosition?.aboveHorizon,
+        )
+        val blend = if (sunrise != null && sunset != null) {
+            FigmaVisualStateResolver.backgroundBlend(
+                now = input.localTime,
+                sunrise = sunrise,
+                sunset = sunset,
+                condition = input.weatherCondition,
+            )
+        } else {
+            FigmaBackgroundBlend(
+                base = FigmaVisualStateResolver.background(period, input.weatherCondition),
+            )
+        }
+        drawCenterCrop(
+            canvas = canvas,
+            source = FigmaVisualAssets.sky(context, blend.base),
+            width = w,
+            height = h,
+        )
+        blend.overlay?.let { overlayState ->
+            if (blend.overlayAlpha > 0f) {
+                drawCenterCrop(
+                    canvas = canvas,
+                    source = FigmaVisualAssets.sky(context, overlayState),
+                    width = w,
+                    height = h,
+                    alpha = blend.overlayAlpha,
+                )
+            }
+        }
 
         val moon = input.moonPosition
         val moonVisibility = if (moon?.aboveHorizon == true) {
@@ -87,14 +121,22 @@ object DynamicSkyRenderer {
         DayPeriod.DAY -> 0f
     }
 
-    private fun drawCenterCrop(canvas: Canvas, source: Bitmap, width: Int, height: Int) {
+    private fun drawCenterCrop(
+        canvas: Canvas,
+        source: Bitmap,
+        width: Int,
+        height: Int,
+        alpha: Float = 1f,
+    ) {
         val src = centerCropRect(source.width, source.height, width, height)
         val dst = Rect(0, 0, width, height)
         canvas.drawBitmap(
             source,
             src,
             dst,
-            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG),
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+                this.alpha = (255f * alpha.coerceIn(0f, 1f)).toInt()
+            },
         )
     }
 

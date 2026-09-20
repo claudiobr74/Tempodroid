@@ -3,7 +3,6 @@ package com.tempodroid.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -56,6 +55,8 @@ import com.tempodroid.weather.WeatherCodeMapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.LocalTime
+import java.time.ZoneId
 
 /** Widget 4×2 SolarWeatherWidget. */
 class SolarWeatherWidget : GlanceAppWidget() {
@@ -88,10 +89,10 @@ private fun SolarWeatherContent(state: SolarWeatherWidgetState, appWidgetId: Int
     val heightPx = (size.height.value * density).toInt().coerceAtLeast(120)
     val bitmaps = WidgetRenderer.render(context, state, widthPx, heightPx)
     val compact = bitmaps.mode == WidgetLayoutMode.COMPACT
-    val description = WidgetContentDescription.forState(state)
+    val zone = runCatching { ZoneId.of(state.timezoneId) }.getOrDefault(ZoneId.systemDefault())
+    val description = WidgetContentDescription.forState(state, LocalTime.now(zone))
     val configure = actionStartActivity(configurationIntent(context, appWidgetId))
-    val weather = actionStartActivity(deepLink(context, "tempodroid://weather", appWidgetId))
-    val forecast = actionStartActivity(deepLink(context, "tempodroid://forecast", appWidgetId))
+    val openApp = actionStartActivity(appIntent(context, appWidgetId))
     val white = ColorProvider(Color.White)
     val secondary = ColorProvider(Color(WidgetTheme.TEXT_SECONDARY))
 
@@ -112,7 +113,7 @@ private fun SolarWeatherContent(state: SolarWeatherWidgetState, appWidgetId: Int
             modifier = GlanceModifier.fillMaxSize().padding(WidgetDimensions.PADDING_DP.dp),
         ) {
             Row(modifier = GlanceModifier.fillMaxWidth()) {
-                Column(modifier = GlanceModifier.clickable(weather)) {
+                Column(modifier = GlanceModifier.clickable(openApp)) {
                     Text(
                         text = WeatherCodeMapper.labelPt(state.condition, state.isDay),
                         style = TextStyle(color = secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium),
@@ -211,7 +212,7 @@ private fun SolarWeatherContent(state: SolarWeatherWidgetState, appWidgetId: Int
             Box(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .clickable(forecast),
+                    .clickable(openApp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -249,9 +250,8 @@ private fun configurationIntent(context: Context, appWidgetId: Int): Intent =
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
     }
 
-private fun deepLink(context: Context, uri: String, appWidgetId: Int): Intent =
+private fun appIntent(context: Context, appWidgetId: Int): Intent =
     Intent(context, MainActivity::class.java).apply {
-        data = Uri.parse(uri)
         putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
     }
@@ -271,6 +271,7 @@ class SolarWeatherWidgetReceiver : GlanceAppWidgetReceiver() {
             try {
                 val cache = AppContainer.get(context).cache
                 appWidgetIds.forEach { cache.deleteWidgetState(it) }
+                WidgetUpdateCoordinator.cancelIfNoWidgets(context)
             } finally {
                 pending.finish()
             }

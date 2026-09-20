@@ -50,14 +50,14 @@ class PrivacyPolicyActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text("Política de privacidade", style = MaterialTheme.typography.headlineSmall)
-                        Text("Última atualização: 17 de setembro de 2026", style = MaterialTheme.typography.bodySmall)
+                        Text("Última atualização: 20 de setembro de 2026", style = MaterialTheme.typography.bodySmall)
                         Text(
                             "O Tempodroid usa apenas os dados necessários para fornecer o widget de relógio, clima e ciclo Sol/Lua.",
                             style = MaterialTheme.typography.bodyLarge,
                         )
                         Text("Localização aproximada", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "A localização aproximada é opcional e só é solicitada quando você toca em “Usar localização aproximada”. O aplicativo não solicita localização precisa, não usa localização em segundo plano e não mantém rastreamento contínuo.",
+                            "A localização aproximada é opcional e só é solicitada quando você toca em “Usar localização aproximada”. O aplicativo não solicita localização precisa, não usa localização em segundo plano e não mantém rastreamento contínuo. Apenas uma localização recente do sistema é aceita.",
                         )
                         Text("Dados armazenados no aparelho", style = MaterialTheme.typography.titleMedium)
                         Text(
@@ -65,7 +65,7 @@ class PrivacyPolicyActivity : ComponentActivity() {
                         )
                         Text("Serviços externos", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "As coordenadas da cidade selecionada são enviadas à Open-Meteo para obter o clima. A busca manual de cidades também usa a geocodificação da Open-Meteo, baseada em dados do GeoNames. Esses serviços podem receber informações técnicas inerentes à conexão, como o endereço IP.",
+                            "As coordenadas da cidade selecionada são enviadas à Open-Meteo para obter o clima e, quando necessário, identificar o fuso horário. A busca manual de cidades também usa a geocodificação da Open-Meteo, baseada em dados do GeoNames. Ao usar a localização aproximada, o Android também pode usar o serviço de geocodificação disponível no próprio aparelho para converter coordenadas em nome de cidade; esse serviço pode ser fornecido pelo sistema ou pelo fabricante. Esses serviços podem receber informações técnicas inerentes à conexão, como o endereço IP.",
                         )
                         Text("Publicidade e analytics", style = MaterialTheme.typography.titleMedium)
                         Text(
@@ -78,7 +78,9 @@ class PrivacyPolicyActivity : ComponentActivity() {
                         Text("Segurança", style = MaterialTheme.typography.titleMedium)
                         Text("As comunicações externas usam HTTPS e o aplicativo bloqueia tráfego HTTP em texto claro.")
                         Text("Fontes", style = MaterialTheme.typography.titleMedium)
-                        Text("Dados meteorológicos: Open-Meteo (CC BY 4.0). Busca de localidades: Open-Meteo/GeoNames.")
+                        Text("Dados meteorológicos e fuso horário: Open-Meteo. Busca de localidades: Open-Meteo/GeoNames. Nome da cidade para localização do aparelho: serviço de geocodificação disponível no Android.")
+                        Text("Contato", style = MaterialTheme.typography.titleMedium)
+                        Text("O canal público de suporte e privacidade é o endereço de contato exibido na ficha do Tempodroid na Google Play.")
                     }
                 }
             }

@@ -48,6 +48,7 @@ object MoonTerminator {
             com.tempodroid.weather.WeatherCondition.FOG -> 0.15f
             com.tempodroid.weather.WeatherCondition.RAIN -> 0.12f
             com.tempodroid.weather.WeatherCondition.HEAVY_RAIN -> 0.06f
+            com.tempodroid.weather.WeatherCondition.SNOW -> 0.18f
             com.tempodroid.weather.WeatherCondition.STORM -> 0f
         }
         val dayFactor = if (isDay) 0.28f else 1f

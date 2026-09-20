@@ -64,11 +64,11 @@ class AstronomyCalculator {
         val jd = julianDate(now)
         val phase = MoonPhaseCalculator.phase(jd)
         val illumination = MoonPhaseCalculator.illumination(jd)
-        val sunPos = SunPositionCalculator.position(
-            localTime = at,
-            sunrise = solar.sunrise,
-            sunset = solar.sunset,
-            solarNoon = solar.solarNoon,
+        val sunHorizontal = sunHorizontal(latitude, longitude, jd)
+        val sunPos = CelestialPositionCalculator.fromHorizontalCoordinates(
+            altitudeDegrees = sunHorizontal.altitude,
+            azimuthDegrees = sunHorizontal.azimuth,
+            aboveHorizon = sunHorizontal.altitude > 0.0,
         )
         val moonPos = moonPosition(
             latitude = latitude,
@@ -92,8 +92,8 @@ class AstronomyCalculator {
     }
 
     data class SolarTimes(
-        val sunrise: LocalTime,
-        val sunset: LocalTime,
+        val sunrise: LocalTime?,
+        val sunset: LocalTime?,
         val solarNoon: LocalTime,
     )
 
@@ -114,18 +114,25 @@ class AstronomyCalculator {
         val dec = asin(sinDec)
         val latRad = latitude.toRadians()
         val cosHa = (sin((-0.833).toRadians()) - sin(latRad) * sinDec) / (cos(latRad) * cos(dec))
-        val ha = when {
-            cosHa >= 1.0 -> 0.0
-            cosHa <= -1.0 -> 12.0
-            else -> acos(cosHa).toDegrees() / 15.0
+        val solarNoon = julianToLocalTime(jTransit, timezone)
+
+        // cosHa >= 1: Sol não nasce nesta data/local (noite polar).
+        // cosHa <= -1: Sol não se põe nesta data/local (dia polar).
+        if (cosHa >= 1.0 || cosHa <= -1.0) {
+            return SolarTimes(
+                sunrise = null,
+                sunset = null,
+                solarNoon = solarNoon,
+            )
         }
-        val solarNoonJd = jTransit
+
+        val ha = acos(cosHa).toDegrees() / 15.0
         val sunriseJd = jTransit - ha / 24.0
         val sunsetJd = jTransit + ha / 24.0
         return SolarTimes(
             sunrise = julianToLocalTime(sunriseJd, timezone),
             sunset = julianToLocalTime(sunsetJd, timezone),
-            solarNoon = julianToLocalTime(solarNoonJd, timezone),
+            solarNoon = solarNoon,
         )
     }
 
@@ -209,7 +216,7 @@ class AstronomyCalculator {
         val alt = asin(sinAlt.coerceIn(-1.0, 1.0)).toDegrees()
         val y = -cos(dec) * sin(ha)
         val x = sin(dec) * cos(lat) - cos(dec) * sin(lat) * cos(ha)
-        var az = atan2(y, x).toDegrees().normalizeDegrees()
+        val az = atan2(y, x).toDegrees().normalizeDegrees()
         return Horizontal(altitude = alt, azimuth = az)
     }
 

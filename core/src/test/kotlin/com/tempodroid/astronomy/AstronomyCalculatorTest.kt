@@ -4,6 +4,7 @@ import com.tempodroid.sky.DayPeriod
 import com.tempodroid.sky.DayPeriodCalculator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -21,10 +22,12 @@ class AstronomyCalculatorTest {
     @Test
     fun sunriseSunsetAroundEquinoxInGoiania() {
         val solar = calculator.solarTimes(goianiaLat, goianiaLon, date, zone)
-        assertTrue("sunrise=${solar.sunrise}", solar.sunrise.hour in 5..7)
-        assertTrue("sunset=${solar.sunset}", solar.sunset.hour in 17..19)
-        assertTrue(solar.sunrise.isBefore(solar.solarNoon))
-        assertTrue(solar.solarNoon.isBefore(solar.sunset))
+        val sunrise = requireNotNull(solar.sunrise)
+        val sunset = requireNotNull(solar.sunset)
+        assertTrue("sunrise=$sunrise", sunrise.hour in 5..7)
+        assertTrue("sunset=$sunset", sunset.hour in 17..19)
+        assertTrue(sunrise.isBefore(solar.solarNoon))
+        assertTrue(solar.solarNoon.isBefore(sunset))
     }
 
     @Test
@@ -38,9 +41,11 @@ class AstronomyCalculatorTest {
     @Test
     fun sunBelowHorizonBeforeSunriseAndAfterSunset() {
         val solar = calculator.solarTimes(goianiaLat, goianiaLon, date, zone)
-        val before = SunPositionCalculator.position(solar.sunrise.minusMinutes(20), solar.sunrise, solar.sunset, solar.solarNoon)
-        val after = SunPositionCalculator.position(solar.sunset.plusMinutes(20), solar.sunrise, solar.sunset, solar.solarNoon)
-        val noon = SunPositionCalculator.position(solar.solarNoon, solar.sunrise, solar.sunset, solar.solarNoon)
+        val sunrise = requireNotNull(solar.sunrise)
+        val sunset = requireNotNull(solar.sunset)
+        val before = SunPositionCalculator.position(sunrise.minusMinutes(20), sunrise, sunset, solar.solarNoon)
+        val after = SunPositionCalculator.position(sunset.plusMinutes(20), sunrise, sunset, solar.solarNoon)
+        val noon = SunPositionCalculator.position(solar.solarNoon, sunrise, sunset, solar.solarNoon)
         assertFalse(before.aboveHorizon)
         assertFalse(after.aboveHorizon)
         assertTrue(noon.aboveHorizon)
@@ -113,7 +118,39 @@ class AstronomyCalculatorTest {
         val data = calculator.compute(goianiaLat, goianiaLon, date, zone, LocalTime.of(21, 45))
         assertEquals(Hemisphere.SOUTH, data.hemisphere)
         assertTrue(data.moonIllumination in 0.0..1.0)
-        assertTrue(data.sunrise.isBefore(data.sunset))
+        assertTrue(requireNotNull(data.sunrise).isBefore(requireNotNull(data.sunset)))
+    }
+
+    @Test
+    fun polarSummerHasNoFakeSunriseOrSunset() {
+        val tromsøZone = ZoneId.of("Europe/Oslo")
+        val summerDate = LocalDate.of(2026, 6, 21)
+        val solar = calculator.solarTimes(69.6492, 18.9553, summerDate, tromsøZone)
+        val data = calculator.compute(69.6492, 18.9553, summerDate, tromsøZone, LocalTime.NOON)
+
+        assertNull(solar.sunrise)
+        assertNull(solar.sunset)
+        assertTrue(data.sunPosition?.aboveHorizon == true)
+        assertEquals(
+            DayPeriod.DAY,
+            DayPeriodCalculator.from(LocalTime.NOON, null, null, solar.solarNoon, data.sunPosition?.aboveHorizon),
+        )
+    }
+
+    @Test
+    fun polarWinterHasNoFakeSunriseOrSunset() {
+        val tromsøZone = ZoneId.of("Europe/Oslo")
+        val winterDate = LocalDate.of(2026, 12, 21)
+        val solar = calculator.solarTimes(69.6492, 18.9553, winterDate, tromsøZone)
+        val data = calculator.compute(69.6492, 18.9553, winterDate, tromsøZone, LocalTime.NOON)
+
+        assertNull(solar.sunrise)
+        assertNull(solar.sunset)
+        assertFalse(data.sunPosition?.aboveHorizon == true)
+        assertEquals(
+            DayPeriod.NIGHT,
+            DayPeriodCalculator.from(LocalTime.NOON, null, null, solar.solarNoon, data.sunPosition?.aboveHorizon),
+        )
     }
 
     @Test

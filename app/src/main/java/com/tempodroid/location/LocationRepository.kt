@@ -5,7 +5,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Geocoder
+import android.location.Location
 import android.location.LocationManager
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.tempodroid.data.PreferencesRepository
 import com.tempodroid.data.WidgetCacheRepository
@@ -62,18 +64,36 @@ class LocationRepository(
             return null
         }
         val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val location = manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            ?: manager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+        val location = listOfNotNull(
+            runCatching { manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) }.getOrNull(),
+            runCatching { manager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER) }.getOrNull(),
+        )
+            .filter { locationAgeMillis(it) <= MAX_LOCATION_AGE_MILLIS }
+            .maxByOrNull { freshnessScore(it) }
             ?: return null
+
         val city = reverseGeocodeCity(location.latitude, location.longitude) ?: "Localização atual"
+        val timezoneId = resolveTimezoneId(location.latitude, location.longitude)
+            ?: ZoneId.systemDefault().id
         return ResolvedLocation(
             city = city,
             latitude = location.latitude,
             longitude = location.longitude,
-            timezoneId = ZoneId.systemDefault().id,
+            timezoneId = timezoneId,
             source = LocationSource.AUTHORIZED_COARSE,
         )
     }
+
+    private fun locationAgeMillis(location: Location): Long {
+        val elapsedNanos = location.elapsedRealtimeNanos
+        if (elapsedNanos > 0L) {
+            return ((SystemClock.elapsedRealtimeNanos() - elapsedNanos).coerceAtLeast(0L) / 1_000_000L)
+        }
+        return (System.currentTimeMillis() - location.time).coerceAtLeast(0L)
+    }
+
+    private fun freshnessScore(location: Location): Long =
+        location.elapsedRealtimeNanos.takeIf { it > 0L } ?: location.time * 1_000_000L
 
     private suspend fun reverseGeocodeCity(latitude: Double, longitude: Double): String? =
         withContext(Dispatchers.IO) {
@@ -90,6 +110,18 @@ class LocationRepository(
                     ?.takeIf { it.isNotBlank() }
             }.getOrNull()
         }
+
+    private suspend fun resolveTimezoneId(latitude: Double, longitude: Double): String? = runCatching {
+        val url = "https://api.open-meteo.com/v1/forecast" +
+            "?latitude=$latitude" +
+            "&longitude=$longitude" +
+            "&current=is_day" +
+            "&timezone=auto" +
+            "&forecast_days=1"
+        val root = Json.parseToJsonElement(http.get(url)).jsonObject
+        root["timezone"]?.jsonPrimitive?.content
+            ?.takeIf { runCatching { ZoneId.of(it) }.isSuccess }
+    }.getOrNull()
 
     suspend fun searchCities(query: String, limit: Int = 5): List<LocationSearchResult> {
         val normalized = query.trim()
@@ -118,4 +150,8 @@ class LocationRepository(
     suspend fun geocode(city: String): ResolvedLocation? = runCatching {
         searchCities(city, limit = 1).firstOrNull()?.toResolvedLocation()
     }.getOrNull()
+
+    companion object {
+        internal const val MAX_LOCATION_AGE_MILLIS = 6 * 60 * 60 * 1000L
+    }
 }

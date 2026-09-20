@@ -39,7 +39,9 @@ class MainActivity : ComponentActivity() {
             isAppearanceLightNavigationBars = true
         }
 
-        WidgetUpdateCoordinator.refreshNow(this)
+        // A tela lê exclusivamente o cache. O ciclo meteorológico pertence ao
+        // WorkManager; assim abrir/reabrir o app não duplica chamadas à API.
+        WidgetUpdateCoordinator.ensurePeriodic(this)
 
         setContent {
             val container = remember { AppContainer.get(this@MainActivity) }
@@ -71,27 +73,7 @@ class MainActivity : ComponentActivity() {
                     else -> widgets.firstOrNull()
                 }
                 primaryWidgetId = selected?.appWidgetId
-                val cached = selected?.state ?: container.cache.loadState()
-                primaryState = runCatching {
-                    val live = container.weatherRepository.getWeather(cached.latitude, cached.longitude)
-                    cached.copy(
-                        temperature = live.temperature ?: cached.temperature,
-                        condition = live.condition,
-                        high = live.high ?: cached.high,
-                        low = live.low ?: cached.low,
-                        rainChance = live.rainChance ?: cached.rainChance,
-                        cloudCover = live.cloudCover ?: cached.cloudCover,
-                        precipitation = live.precipitation ?: cached.precipitation,
-                        weatherCode = live.weatherCode ?: cached.weatherCode,
-                        isDay = live.isDay,
-                        updatedAt = live.timestamp ?: cached.updatedAt,
-                        apparentTemperature = live.apparentTemperature,
-                        relativeHumidity = live.relativeHumidity,
-                        windSpeedKmh = live.windSpeedKmh,
-                        surfacePressureHpa = live.surfacePressureHpa,
-                        hasWeatherError = false,
-                    )
-                }.getOrElse { cached }
+                primaryState = selected?.state ?: container.cache.loadState()
                 networkLabel = currentNetworkLabel()
             }
 

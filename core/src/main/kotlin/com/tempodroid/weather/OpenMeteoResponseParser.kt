@@ -48,25 +48,35 @@ object OpenMeteoResponseParser {
 
     fun parse(body: String): WeatherData {
         val response = json.decodeFromString(OpenMeteoResponse.serializer(), body)
-        val current = response.current
-        val code = current?.weatherCode ?: 0
-        val timestamp = current?.time?.let { parseInstant(it, response.timezone) }
+        val current = requireNotNull(response.current) {
+            "Open-Meteo retornou payload sem bloco current"
+        }
+        val code = requireNotNull(current.weatherCode) {
+            "Open-Meteo retornou payload sem weather_code"
+        }
+        val isDayRaw = requireNotNull(current.isDay) {
+            "Open-Meteo retornou payload sem is_day"
+        }
+        require(isDayRaw == 0 || isDayRaw == 1) {
+            "Open-Meteo retornou is_day inválido: $isDayRaw"
+        }
+        val timestamp = current.time?.let { parseInstant(it, response.timezone) }
         return WeatherData(
-            temperature = current?.temperature?.roundToInt(),
+            temperature = current.temperature?.roundToInt(),
             condition = WeatherCodeMapper.fromOpenMeteo(code),
             high = response.daily?.temperatureMax?.firstOrNull()?.roundToInt(),
             low = response.daily?.temperatureMin?.firstOrNull()?.roundToInt(),
             rainChance = response.daily?.rainChance?.firstOrNull(),
-            cloudCover = current?.cloudCover,
-            precipitation = current?.precipitation,
+            cloudCover = current.cloudCover,
+            precipitation = current.precipitation,
             weatherCode = code,
-            isDay = (current?.isDay ?: 1) == 1,
+            isDay = isDayRaw == 1,
             timestamp = timestamp,
             timezoneId = response.timezone,
-            apparentTemperature = current?.apparentTemperature?.roundToInt(),
-            relativeHumidity = current?.relativeHumidity,
-            windSpeedKmh = current?.windSpeed?.roundToInt(),
-            surfacePressureHpa = current?.surfacePressure?.roundToInt(),
+            apparentTemperature = current.apparentTemperature?.roundToInt(),
+            relativeHumidity = current.relativeHumidity,
+            windSpeedKmh = current.windSpeed?.roundToInt(),
+            surfacePressureHpa = current.surfacePressure?.roundToInt(),
         )
     }
 

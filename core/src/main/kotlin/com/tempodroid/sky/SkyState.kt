@@ -17,10 +17,14 @@ enum class DayPeriod {
 object DayPeriodCalculator {
     fun from(
         now: LocalTime,
-        sunrise: LocalTime,
-        sunset: LocalTime,
+        sunrise: LocalTime?,
+        sunset: LocalTime?,
         solarNoon: LocalTime?,
+        sunAboveHorizon: Boolean? = null,
     ): DayPeriod {
+        if (sunrise == null || sunset == null) {
+            return if (sunAboveHorizon == true) DayPeriod.DAY else DayPeriod.NIGHT
+        }
         val nowM = minutesOf(now)
         val rise = minutesOf(sunrise)
         val set = minutesOf(sunset)

@@ -1,20 +1,21 @@
 package com.tempodroid.widget
 
+import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.tempodroid.workers.TimelineUpdateWorker
 import com.tempodroid.workers.WeatherUpdateWorker
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 object WidgetUpdateCoordinator {
@@ -24,12 +25,27 @@ object WidgetUpdateCoordinator {
     const val UNIQUE_ASTRONOMY_ONCE = "solar_weather_widget_astronomy_once"
     const val KEY_APP_WIDGET_ID = "app_widget_id"
 
+    private const val WEATHER_BACKOFF_MINUTES = 10L
+
     fun ensurePeriodic(context: Context) {
-        val workManager = WorkManager.getInstance(context)
-        val weatherRequest = PeriodicWorkRequestBuilder<WeatherUpdateWorker>(30, TimeUnit.MINUTES).build()
+        val appContext = context.applicationContext
+        if (!hasInstalledWidgets(appContext)) {
+            cancelAll(appContext)
+            return
+        }
+
+        val workManager = WorkManager.getInstance(appContext)
+        val weatherRequest = PeriodicWorkRequestBuilder<WeatherUpdateWorker>(30, TimeUnit.MINUTES)
+            .setConstraints(weatherConstraints())
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                WEATHER_BACKOFF_MINUTES,
+                TimeUnit.MINUTES,
+            )
+            .build()
         workManager.enqueueUniquePeriodicWork(
             UNIQUE_PERIODIC,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,
             weatherRequest,
         )
 
@@ -39,57 +55,102 @@ object WidgetUpdateCoordinator {
          * horas. Cancela a agenda antiga e usa o alarme local one-shot.
          */
         workManager.cancelUniqueWork(UNIQUE_TIMELINE_PERIODIC)
-        AstronomyRefreshScheduler.scheduleNext(context)
+        AstronomyRefreshScheduler.scheduleNext(appContext)
     }
 
     fun refreshAstronomyNow(context: Context) {
+        val appContext = context.applicationContext
+        if (!hasInstalledWidgets(appContext)) {
+            cancelAll(appContext)
+            return
+        }
         val request = OneTimeWorkRequestBuilder<TimelineUpdateWorker>().build()
-        WorkManager.getInstance(context).enqueueUniqueWork(
+        WorkManager.getInstance(appContext).enqueueUniqueWork(
             UNIQUE_ASTRONOMY_ONCE,
             ExistingWorkPolicy.REPLACE,
             request,
         )
-        AstronomyRefreshScheduler.scheduleNext(context)
+        AstronomyRefreshScheduler.scheduleNext(appContext)
     }
 
     fun refreshNow(context: Context) {
-        val request = OneTimeWorkRequestBuilder<WeatherUpdateWorker>().build()
-        WorkManager.getInstance(context).enqueueUniqueWork(
+        val appContext = context.applicationContext
+        if (!hasInstalledWidgets(appContext)) {
+            cancelAll(appContext)
+            return
+        }
+        val request = OneTimeWorkRequestBuilder<WeatherUpdateWorker>()
+            .setConstraints(weatherConstraints())
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                WEATHER_BACKOFF_MINUTES,
+                TimeUnit.MINUTES,
+            )
+            .build()
+        WorkManager.getInstance(appContext).enqueueUniqueWork(
             UNIQUE_ONCE_ALL,
             ExistingWorkPolicy.REPLACE,
             request,
         )
-        refreshAstronomyNow(context)
-        ensurePeriodic(context)
+        refreshAstronomyNow(appContext)
+        ensurePeriodic(appContext)
     }
 
     fun refreshWidget(context: Context, appWidgetId: Int) {
+        val appContext = context.applicationContext
+        if (!isInstalledWidget(appContext, appWidgetId)) {
+            cancelIfNoWidgets(appContext)
+            return
+        }
         val request = OneTimeWorkRequestBuilder<WeatherUpdateWorker>()
             .setInputData(workDataOf(KEY_APP_WIDGET_ID to appWidgetId))
+            .setConstraints(weatherConstraints())
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                WEATHER_BACKOFF_MINUTES,
+                TimeUnit.MINUTES,
+            )
             .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(
+        WorkManager.getInstance(appContext).enqueueUniqueWork(
             "solar_weather_widget_once_$appWidgetId",
             ExistingWorkPolicy.REPLACE,
             request,
         )
-        refreshAstronomyNow(context)
-        ensurePeriodic(context)
+        refreshAstronomyNow(appContext)
+        ensurePeriodic(appContext)
     }
 
     fun cancelIfNoWidgets(context: Context) {
-        CoroutineScope(Dispatchers.Default).launch {
-            val manager = GlanceAppWidgetManager(context)
-            val ids = manager.getGlanceIds(SolarWeatherWidget::class.java)
-            if (ids.isEmpty()) {
-                val workManager = WorkManager.getInstance(context)
-                workManager.cancelUniqueWork(UNIQUE_PERIODIC)
-                workManager.cancelUniqueWork(UNIQUE_TIMELINE_PERIODIC)
-                workManager.cancelUniqueWork(UNIQUE_ONCE_ALL)
-                workManager.cancelUniqueWork(UNIQUE_ASTRONOMY_ONCE)
-                AstronomyRefreshScheduler.cancel(context)
-            }
-        }
+        val appContext = context.applicationContext
+        if (!hasInstalledWidgets(appContext)) cancelAll(appContext)
     }
+
+    fun cancelAll(context: Context) {
+        val appContext = context.applicationContext
+        val workManager = WorkManager.getInstance(appContext)
+        workManager.cancelUniqueWork(UNIQUE_PERIODIC)
+        workManager.cancelUniqueWork(UNIQUE_TIMELINE_PERIODIC)
+        workManager.cancelUniqueWork(UNIQUE_ONCE_ALL)
+        workManager.cancelUniqueWork(UNIQUE_ASTRONOMY_ONCE)
+        AstronomyRefreshScheduler.cancel(appContext)
+    }
+
+    internal fun hasInstalledWidgets(context: Context): Boolean =
+        installedWidgetIds(context).isNotEmpty()
+
+    internal fun isInstalledWidget(context: Context, appWidgetId: Int): Boolean =
+        installedWidgetIds(context).contains(appWidgetId)
+
+    internal fun installedWidgetIds(context: Context): IntArray {
+        val manager = AppWidgetManager.getInstance(context)
+        val provider = ComponentName(context, SolarWeatherWidgetReceiver::class.java)
+        return manager.getAppWidgetIds(provider)
+    }
+
+    private fun weatherConstraints(): Constraints =
+        Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
 }
 
 class WidgetBootReceiver : BroadcastReceiver() {
