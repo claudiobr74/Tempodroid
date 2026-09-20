@@ -2,6 +2,7 @@ package com.tempodroid.astronomy
 
 import java.time.LocalTime
 import kotlin.math.PI
+import kotlin.math.pow
 import kotlin.math.sin
 
 /**
@@ -57,7 +58,45 @@ object SunPositionCalculator {
 
 object CelestialPositionCalculator {
     /**
-     * Interpola arco nascer→ocaso. Lida com astros que cruzam a meia-noite.
+     * Projeta altitude/azimute reais para o céu 2D do widget.
+     *
+     * Leste aparece à esquerda, oeste à direita, e o zênite converge para o
+     * centro. O eixo vertical usa a altitude astronômica real com uma curva
+     * perceptual suave para preservar a sensação de profundidade perto do
+     * horizonte sem deslocar artificialmente a Lua para cima.
+     */
+    fun fromHorizontalCoordinates(
+        altitudeDegrees: Double,
+        azimuthDegrees: Double,
+        aboveHorizon: Boolean,
+    ): CelestialPosition {
+        val azimuth = azimuthDegrees.normalizeDegrees()
+        if (!aboveHorizon || altitudeDegrees <= 0.0) {
+            return CelestialPosition(
+                normalizedX = horizontalX(azimuth),
+                normalizedY = 1.08f,
+                aboveHorizon = false,
+                altitudeDegrees = altitudeDegrees,
+                azimuthDegrees = azimuth,
+            )
+        }
+
+        val altitude = altitudeDegrees.coerceIn(0.0, 90.0)
+        val altitudeFactor = sin(altitude.toRadians()).coerceIn(0.0, 1.0).pow(0.85)
+        val y = (0.90 - altitudeFactor * 0.72).toFloat().coerceIn(0.16f, 0.92f)
+
+        return CelestialPosition(
+            normalizedX = horizontalX(azimuth),
+            normalizedY = y,
+            aboveHorizon = true,
+            altitudeDegrees = altitudeDegrees,
+            azimuthDegrees = azimuth,
+        )
+    }
+
+    /**
+     * Interpola arco nascer→ocaso. Mantido apenas como fallback/fixture quando
+     * altitude e azimute reais não estão disponíveis.
      */
     fun alongArc(now: LocalTime, rise: LocalTime, set: LocalTime): CelestialPosition {
         val nowM = minutesOf(now)
@@ -95,6 +134,12 @@ object CelestialPositionCalculator {
             else nowMinutes + 24 * 60 - riseMinutes
         }
         return (elapsed.toFloat() / duration).coerceIn(0f, 1f)
+    }
+
+    private fun horizontalX(azimuthDegrees: Double): Float {
+        // sin(90°)=+1 => leste à esquerda; sin(270°)=-1 => oeste à direita.
+        val eastWest = sin(azimuthDegrees.toRadians())
+        return (0.50 - 0.42 * eastWest).toFloat().coerceIn(0.08f, 0.92f)
     }
 }
 
