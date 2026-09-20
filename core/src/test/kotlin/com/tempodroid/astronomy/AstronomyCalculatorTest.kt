@@ -73,6 +73,42 @@ class AstronomyCalculatorTest {
     }
 
     @Test
+    fun realHorizontalProjectionKeepsRisingMoonLowAndTransitHigh() {
+        val rising = CelestialPositionCalculator.fromHorizontalCoordinates(
+            altitudeDegrees = 11.6,
+            azimuthDegrees = 95.0,
+            aboveHorizon = true,
+        )
+        val transit = CelestialPositionCalculator.fromHorizontalCoordinates(
+            altitudeDegrees = 81.5,
+            azimuthDegrees = 180.0,
+            aboveHorizon = true,
+        )
+        val setting = CelestialPositionCalculator.fromHorizontalCoordinates(
+            altitudeDegrees = 8.0,
+            azimuthDegrees = 265.0,
+            aboveHorizon = true,
+        )
+
+        assertTrue(rising.normalizedY > 0.65f)
+        assertTrue(transit.normalizedY < 0.28f)
+        assertTrue(setting.normalizedY > 0.70f)
+        assertTrue(rising.normalizedX < transit.normalizedX)
+        assertTrue(transit.normalizedX < setting.normalizedX)
+    }
+
+    @Test
+    fun belowHorizonHorizontalProjectionIsHidden() {
+        val hidden = CelestialPositionCalculator.fromHorizontalCoordinates(
+            altitudeDegrees = -4.0,
+            azimuthDegrees = 280.0,
+            aboveHorizon = false,
+        )
+        assertFalse(hidden.aboveHorizon)
+        assertTrue(hidden.normalizedY > 1f)
+    }
+
+    @Test
     fun computeReturnsConsistentHemisphereAndPhase() {
         val data = calculator.compute(goianiaLat, goianiaLon, date, zone, LocalTime.of(21, 45))
         assertEquals(Hemisphere.SOUTH, data.hemisphere)
