@@ -169,8 +169,10 @@ class WidgetCacheRepository(private val context: Context) {
 
     suspend fun saveAstronomy(data: AstronomyData, appWidgetId: Int? = null) {
         context.dataStore.edit {
-            it[stringKey(Names.sunrise, appWidgetId)] = data.sunrise.toString()
-            it[stringKey(Names.sunset, appWidgetId)] = data.sunset.toString()
+            data.sunrise?.let { value -> it[stringKey(Names.sunrise, appWidgetId)] = value.toString() }
+                ?: it.remove(stringKey(Names.sunrise, appWidgetId))
+            data.sunset?.let { value -> it[stringKey(Names.sunset, appWidgetId)] = value.toString() }
+                ?: it.remove(stringKey(Names.sunset, appWidgetId))
             data.solarNoon?.let { value -> it[stringKey(Names.solarNoon, appWidgetId)] = value.toString() }
                 ?: it.remove(stringKey(Names.solarNoon, appWidgetId))
             data.moonrise?.let { value -> it[stringKey(Names.moonrise, appWidgetId)] = value.toString() }
@@ -219,8 +221,8 @@ class WidgetCacheRepository(private val context: Context) {
         fun scopedBool(name: String): Boolean? = prefs[boolKey(name, appWidgetId)]
 
         val astronomy = AstronomyData(
-            sunrise = scopedString(Names.sunrise).toLocalTimeOr(LocalTime.of(6, 10)),
-            sunset = scopedString(Names.sunset).toLocalTimeOr(LocalTime.of(18, 5)),
+            sunrise = scopedString(Names.sunrise).toLocalTimeOrNull(),
+            sunset = scopedString(Names.sunset).toLocalTimeOrNull(),
             solarNoon = scopedString(Names.solarNoon).toLocalTimeOrNull(),
             moonrise = scopedString(Names.moonrise).toLocalTimeOrNull(),
             moonset = scopedString(Names.moonset).toLocalTimeOrNull(),
@@ -280,9 +282,6 @@ class WidgetCacheRepository(private val context: Context) {
         }
     }
 }
-
-private fun String?.toLocalTimeOr(fallback: LocalTime): LocalTime =
-    this?.let { runCatching { LocalTime.parse(it) }.getOrNull() } ?: fallback
 
 private fun String?.toLocalTimeOrNull(): LocalTime? =
     this?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
