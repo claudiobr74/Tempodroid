@@ -11,13 +11,15 @@ object WeatherCodeMapper {
         1, 2 -> WeatherCondition.PARTLY_CLOUDY
         3 -> WeatherCondition.CLOUDY
         45, 48 -> WeatherCondition.FOG
-        51, 53, 56, 61, 66, 80, 85 -> WeatherCondition.RAIN
-        55, 57, 63, 65, 67, 81, 82, 86 -> WeatherCondition.HEAVY_RAIN
-        71, 73, 75, 77 -> WeatherCondition.CLOUDY
+        51, 53, 56, 61, 66, 80 -> WeatherCondition.RAIN
+        55, 57, 63, 65, 67, 81, 82 -> WeatherCondition.HEAVY_RAIN
+        71, 73, 75, 77, 85, 86 -> WeatherCondition.SNOW
         95, 96, 99 -> WeatherCondition.STORM
         in 50..59 -> WeatherCondition.RAIN
         in 60..69 -> WeatherCondition.RAIN
+        in 70..79 -> WeatherCondition.SNOW
         in 80..84 -> WeatherCondition.RAIN
+        in 85..86 -> WeatherCondition.SNOW
         in 90..99 -> WeatherCondition.STORM
         else -> WeatherCondition.CLOUDY
     }
@@ -28,6 +30,7 @@ object WeatherCodeMapper {
         WeatherCondition.CLOUDY -> "Nublado"
         WeatherCondition.RAIN -> "Chuva"
         WeatherCondition.HEAVY_RAIN -> "Chuva forte"
+        WeatherCondition.SNOW -> "Neve"
         WeatherCondition.STORM -> "Tempestade"
         WeatherCondition.FOG -> "Neblina"
     }
