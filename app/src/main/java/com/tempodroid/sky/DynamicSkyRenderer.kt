@@ -29,18 +29,20 @@ object DynamicSkyRenderer {
         val (w, h) = WidgetDimensions.clampBitmapSize(input.widthPx, input.heightPx)
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
+        val sunrise = input.sunrise
+        val sunset = input.sunset
         val period = DayPeriodCalculator.from(
             now = input.localTime,
-            sunrise = input.sunrise,
-            sunset = input.sunset,
+            sunrise = sunrise,
+            sunset = sunset,
             solarNoon = input.solarNoon,
             sunAboveHorizon = input.sunPosition?.aboveHorizon,
         )
-        val blend = if (input.sunrise != null && input.sunset != null) {
+        val blend = if (sunrise != null && sunset != null) {
             FigmaVisualStateResolver.backgroundBlend(
                 now = input.localTime,
-                sunrise = input.sunrise,
-                sunset = input.sunset,
+                sunrise = sunrise,
+                sunset = sunset,
                 condition = input.weatherCondition,
             )
         } else {
