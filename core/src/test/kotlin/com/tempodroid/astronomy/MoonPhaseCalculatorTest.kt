@@ -4,11 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import kotlin.math.abs
 
 class MoonPhaseCalculatorTest {
 
@@ -31,6 +28,23 @@ class MoonPhaseCalculatorTest {
         val jd = MoonPhaseCalculator.KNOWN_NEW_MOON_JD + MoonPhaseCalculator.SYNODIC_MONTH_DAYS / 2.0
         assertEquals(MoonPhase.FULL_MOON, MoonPhaseCalculator.phase(jd))
         assertTrue(MoonPhaseCalculator.illumination(jd) > 0.95)
+    }
+
+    @Test
+    fun september2026AfterFirstQuarterIsWaxingGibbous() {
+        val local = ZonedDateTime.of(
+            2026,
+            9,
+            20,
+            17,
+            0,
+            0,
+            0,
+            ZoneId.of("America/Sao_Paulo"),
+        )
+        val jd = calculator.julianDate(local)
+        assertTrue(MoonPhaseCalculator.illumination(jd) > 0.60)
+        assertEquals(MoonPhase.WAXING_GIBBOUS, MoonPhaseCalculator.phase(jd))
     }
 
     @Test
