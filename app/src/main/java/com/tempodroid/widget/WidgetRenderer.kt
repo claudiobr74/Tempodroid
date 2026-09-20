@@ -88,12 +88,20 @@ object WidgetRenderer {
             )
         } ?: state
 
-        val sun = liveAstronomy?.sunPosition ?: SunPositionCalculator.position(
-            now,
-            renderState.sunrise ?: LocalTime.of(6, 10),
-            renderState.sunset ?: LocalTime.of(18, 5),
-            renderState.solarNoon,
-        )
+        val sun = liveAstronomy?.sunPosition ?: run {
+            val rise = renderState.sunrise
+            val set = renderState.sunset
+            if (rise != null && set != null) {
+                SunPositionCalculator.position(
+                    now,
+                    rise,
+                    set,
+                    renderState.solarNoon,
+                )
+            } else {
+                null
+            }
+        }
         val moon = liveAstronomy?.moonPosition ?: run {
             val rise = renderState.moonrise
             val set = renderState.moonset
@@ -111,8 +119,8 @@ object WidgetRenderer {
                 widthPx = w,
                 heightPx = h,
                 localTime = now,
-                sunrise = renderState.sunrise ?: LocalTime.of(6, 10),
-                sunset = renderState.sunset ?: LocalTime.of(18, 5),
+                sunrise = renderState.sunrise,
+                sunset = renderState.sunset,
                 weatherCondition = renderState.condition,
                 cloudCover = renderState.cloudCover,
                 precipitation = renderState.precipitation,
