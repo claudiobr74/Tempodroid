@@ -29,13 +29,25 @@ object DynamicSkyRenderer {
         val (w, h) = WidgetDimensions.clampBitmapSize(input.widthPx, input.heightPx)
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        val period = DayPeriodCalculator.from(input.localTime, input.sunrise, input.sunset, input.solarNoon)
-        val blend = FigmaVisualStateResolver.backgroundBlend(
+        val period = DayPeriodCalculator.from(
             now = input.localTime,
             sunrise = input.sunrise,
             sunset = input.sunset,
-            condition = input.weatherCondition,
+            solarNoon = input.solarNoon,
+            sunAboveHorizon = input.sunPosition?.aboveHorizon,
         )
+        val blend = if (input.sunrise != null && input.sunset != null) {
+            FigmaVisualStateResolver.backgroundBlend(
+                now = input.localTime,
+                sunrise = input.sunrise,
+                sunset = input.sunset,
+                condition = input.weatherCondition,
+            )
+        } else {
+            FigmaBackgroundBlend(
+                base = FigmaVisualStateResolver.background(period, input.weatherCondition),
+            )
+        }
         drawCenterCrop(
             canvas = canvas,
             source = FigmaVisualAssets.sky(context, blend.base),
