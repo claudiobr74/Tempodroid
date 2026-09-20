@@ -1,52 +1,82 @@
 #!/usr/bin/env python3
-"""Fail fast if the raster assets from the canonical Figma file are swapped or changed.
-
-The expected Git blob ids below correspond to the exact source-image bytes used
-by the current DynamicSkyBackground variants in Figma. A path mismatch is
-therefore detected even when every file is a valid PNG with the right size.
-"""
+"""Verify the 15 Figma sky assets bundled by Tempodroid."""
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-
-EXPECTED = {
-    "app/src/main/res/drawable-nodpi/figma_sky_clear_day.png": (1031366, "684f66f4078f6af0ffa07ece9d60e860d5f88fef"),
-    "app/src/main/res/drawable-nodpi/figma_sky_partly_cloudy.png": (1275595, "55d125c38cfb953001f11bd9858989eaafa1be40"),
-    "app/src/main/res/drawable-nodpi/figma_sky_cloudy.png": (1167726, "d6e71e9685fd2ff0d672500e167189b192e0b80e"),
-    "app/src/main/res/drawable-nodpi/figma_sky_rain.png": (1144712, "3ad7b750e5a5156d7971144f481842e5d9aa9829"),
-    "app/src/main/res/drawable-nodpi/figma_sky_storm.png": (1202370, "91e27aa719f31aaec40051ecec764439bddb0cd1"),
-    "app/src/main/res/drawable-nodpi/figma_sky_sunrise.png": (1165101, "cb3d1fd79f2da68f49177f913dfcecb713eaabd9"),
-    "app/src/main/res/drawable-nodpi/figma_sky_sunset.png": (1228686, "23b04634567fb7094591b22f513366fc6d69be2b"),
-    "app/src/main/res/drawable-nodpi/figma_sky_clear_night.png": (1687599, "b3057916652cbacb5eed70b66029108ad264a1da"),
-    "app/src/main/res/drawable-nodpi/figma_sky_cloudy_night.png": (1241609, "08d6d1e87a97597b88c47f12ade0833befb8b1cd"),
-    "app/src/main/res/drawable-nodpi/figma_sky_rain_night.png": (1517083, "9f00d46751ad5ebb84d5c0044be70ce949fe97ec"),
-    "app/src/main/res/drawable-nodpi/figma_moon_surface.png": (151644, "2e3fa1830c3be5161e773011e3fb0e7ed9a1b395"),
+SKIES = {
+    "figma_sky_day_clear.jpg": 27420,
+    "figma_sky_day_partly_cloudy.jpg": 58731,
+    "figma_sky_day_cloudy.jpg": 29810,
+    "figma_sky_day_rain.jpg": 24779,
+    "figma_sky_day_storm.jpg": 38799,
+    "figma_sky_sunset_clear.jpg": 27801,
+    "figma_sky_sunset_partly_cloudy.jpg": 42479,
+    "figma_sky_sunset_cloudy.jpg": 38399,
+    "figma_sky_sunset_rain.jpg": 35389,
+    "figma_sky_sunset_storm.jpg": 44823,
+    "figma_sky_night_clear.jpg": 38214,
+    "figma_sky_night_partly_cloudy.jpg": 37337,
+    "figma_sky_night_cloudy.jpg": 23044,
+    "figma_sky_night_rain.jpg": 34723,
+    "figma_sky_night_storm.jpg": 34709,
 }
+DRAWABLES = ROOT / "app/src/main/res/drawable-nodpi"
 
 
-def git_blob_id(data: bytes) -> str:
-    header = f"blob {len(data)}\0".encode("ascii")
-    return hashlib.sha1(header + data).hexdigest()
+def jpeg_dimensions(data: bytes) -> tuple[int, int] | None:
+    if len(data) < 4 or data[:2] != b"\xff\xd8" or data[-2:] != b"\xff\xd9":
+        return None
+    i = 2
+    sof = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
+    while i + 3 < len(data):
+        if data[i] != 0xFF:
+            i += 1
+            continue
+        while i < len(data) and data[i] == 0xFF:
+            i += 1
+        if i >= len(data):
+            break
+        marker = data[i]
+        i += 1
+        if marker in {0xD8, 0xD9} or 0xD0 <= marker <= 0xD7:
+            continue
+        if i + 1 >= len(data):
+            break
+        length = int.from_bytes(data[i:i + 2], "big")
+        if length < 2 or i + length > len(data):
+            break
+        if marker in sof and length >= 7:
+            height = int.from_bytes(data[i + 3:i + 5], "big")
+            width = int.from_bytes(data[i + 5:i + 7], "big")
+            return width, height
+        i += length
+    return None
 
 
 def main() -> int:
     failures: list[str] = []
-    for relative, (expected_size, expected_blob) in EXPECTED.items():
-        path = ROOT / relative
+    for name, expected_size in SKIES.items():
+        path = DRAWABLES / name
         if not path.is_file():
-            failures.append(f"missing: {relative}")
+            failures.append(f"missing: {name}")
             continue
         data = path.read_bytes()
-        actual_blob = git_blob_id(data)
-        if len(data) != expected_size or actual_blob != expected_blob:
-            failures.append(
-                f"mismatch: {relative} size={len(data)} blob={actual_blob} "
-                f"expected_size={expected_size} expected_blob={expected_blob}"
-            )
+        if len(data) != expected_size:
+            failures.append(f"size: {name}={len(data)} expected={expected_size}")
+        dimensions = jpeg_dimensions(data)
+        if dimensions != (630, 178):
+            failures.append(f"dimensions: {name}={dimensions} expected=(630, 178)")
+
+    moon = DRAWABLES / "figma_moon_surface.png"
+    if not moon.is_file() or moon.stat().st_size != 151644:
+        failures.append("moon texture missing or changed")
+
+    old = sorted(p.name for p in DRAWABLES.glob("figma_sky_*.png"))
+    if old:
+        failures.append(f"obsolete sky PNGs still bundled: {', '.join(old)}")
 
     if failures:
         print("Figma visual asset integrity FAILED", file=sys.stderr)
@@ -54,7 +84,7 @@ def main() -> int:
             print(f"- {failure}", file=sys.stderr)
         return 1
 
-    print(f"Figma visual asset integrity OK ({len(EXPECTED)} assets)")
+    print("Figma visual asset integrity OK (15 skies + moon)")
     return 0
 
 

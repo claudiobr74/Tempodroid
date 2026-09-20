@@ -33,19 +33,11 @@ jobs:
           set -euo pipefail
           D=app/src/main/res/drawable-nodpi
           mkdir -p "$D"
-
           fetch() {
             local name="$1" url="$2" size="$3"
             curl -fsSL --retry 3 --retry-delay 1 "$url" -o "$D/$name.jpg"
             test "$(stat -c%s "$D/$name.jpg")" -eq "$size"
-            python3 - "$D/$name.jpg" <<'PY'
-import pathlib, sys
-p = pathlib.Path(sys.argv[1])
-b = p.read_bytes()
-assert b[:2] == b'\xff\xd8' and b[-2:] == b'\xff\xd9', f'{p} não é JPEG válido'
-PY
           }
-
           fetch figma_sky_day_clear 'https://www.figma.com/api/mcp/asset/00829dfd-7192-4b5d-ae66-3292943fe948' 27420
           fetch figma_sky_day_partly_cloudy 'https://www.figma.com/api/mcp/asset/c297558a-c2cb-4d37-beb4-f35cb5e7c977' 58731
           fetch figma_sky_day_cloudy 'https://www.figma.com/api/mcp/asset/3310d01e-6f6c-4f0f-bf0c-2e4eda3b042c' 29810
@@ -61,74 +53,7 @@ PY
           fetch figma_sky_night_cloudy 'https://www.figma.com/api/mcp/asset/4c6e340a-68fb-4b29-80ac-10012655da83' 23044
           fetch figma_sky_night_rain 'https://www.figma.com/api/mcp/asset/00b1b151-2586-4779-8c5e-b6cdf7e13ea2' 34723
           fetch figma_sky_night_storm 'https://www.figma.com/api/mcp/asset/4122cb6a-904a-41f3-8afd-c6918eccbf2f' 34709
-
           find "$D" -maxdepth 1 -type f -name 'figma_sky_*.png' -delete
-
-      - name: Regenerate exact asset integrity gate
-        shell: bash
-        run: |
-          python3 - <<'PY'
-from pathlib import Path
-import hashlib
-
-root = Path('.')
-paths = sorted((root/'app/src/main/res/drawable-nodpi').glob('figma_sky_*.jpg'))
-paths.append(root/'app/src/main/res/drawable-nodpi/figma_moon_surface.png')
-
-def blob(data: bytes) -> str:
-    return hashlib.sha1(f'blob {len(data)}\0'.encode() + data).hexdigest()
-
-items=[]
-for p in paths:
-    data=p.read_bytes()
-    items.append((p.as_posix(),len(data),blob(data)))
-
-lines=[
-'#!/usr/bin/env python3',
-'"""Verify the exact raster bytes synchronized from the canonical Tempodroid Figma file."""',
-'from __future__ import annotations',
-'',
-'import hashlib',
-'from pathlib import Path',
-'import sys',
-'',
-'ROOT = Path(__file__).resolve().parents[1]',
-'EXPECTED = {',
-]
-for path,size,sha in items:
-    lines.append(f'    "{path}": ({size}, "{sha}"),')
-lines += [
-'}',
-'',
-'def git_blob_id(data: bytes) -> str:',
-'    header = f"blob {len(data)}\\0".encode("ascii")',
-'    return hashlib.sha1(header + data).hexdigest()',
-'',
-'def main() -> int:',
-'    failures: list[str] = []',
-'    for relative, (expected_size, expected_blob) in EXPECTED.items():',
-'        path = ROOT / relative',
-'        if not path.is_file():',
-'            failures.append(f"missing: {relative}")',
-'            continue',
-'        data = path.read_bytes()',
-'        actual_blob = git_blob_id(data)',
-'        if len(data) != expected_size or actual_blob != expected_blob:',
-'            failures.append(f"mismatch: {relative} size={len(data)} blob={actual_blob} expected_size={expected_size} expected_blob={expected_blob}")',
-'    if failures:',
-'        print("Figma visual asset integrity FAILED", file=sys.stderr)',
-'        for failure in failures:',
-'            print(f"- {failure}", file=sys.stderr)',
-'        return 1',
-'    print(f"Figma visual asset integrity OK ({len(EXPECTED)} assets)")',
-'    return 0',
-'',
-'if __name__ == "__main__":',
-'    raise SystemExit(main())',
-]
-Path('scripts/verify_figma_visual_assets.py').write_text('\n'.join(lines)+'\n')
-PY
-          chmod +x scripts/verify_figma_visual_assets.py
           python3 scripts/verify_figma_visual_assets.py
 
       - name: Tests, lint and debug build
