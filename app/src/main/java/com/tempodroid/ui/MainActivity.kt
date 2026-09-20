@@ -39,7 +39,9 @@ class MainActivity : ComponentActivity() {
             isAppearanceLightNavigationBars = true
         }
 
-        WidgetUpdateCoordinator.refreshNow(this)
+        // Mantém apenas a agenda periódica. A própria tela faz uma única
+        // consulta ao Open-Meteo; não disparamos um segundo refresh em paralelo.
+        WidgetUpdateCoordinator.ensurePeriodic(this)
 
         setContent {
             val container = remember { AppContainer.get(this@MainActivity) }
@@ -74,6 +76,12 @@ class MainActivity : ComponentActivity() {
                 val cached = selected?.state ?: container.cache.loadState()
                 primaryState = runCatching {
                     val live = container.weatherRepository.getWeather(cached.latitude, cached.longitude)
+                    selected?.appWidgetId?.let { id ->
+                        container.cache.clearWeather(id)
+                        container.cache.saveWeather(live, id)
+                        // Redraw local; não faz nova consulta meteorológica.
+                        WidgetUpdateCoordinator.refreshAstronomyNow(this@MainActivity)
+                    }
                     cached.copy(
                         temperature = live.temperature ?: cached.temperature,
                         condition = live.condition,
