@@ -8,11 +8,14 @@ import com.tempodroid.widget.SolarWeatherWidgetState
 import java.time.LocalTime
 
 object WidgetContentDescription {
-    fun forState(state: SolarWeatherWidgetState): String {
+    fun forState(
+        state: SolarWeatherWidgetState,
+        spokenClock: LocalTime? = state.displayTime,
+    ): String {
         val parts = mutableListOf<String>()
         state.temperature?.let { parts += "Temperatura atual $it graus" }
         parts += conditionDescription(state.condition, state.isDay)
-        state.displayTime?.let { parts += "Hora ${spokenTime(it)}" }
+        spokenClock?.let { parts += "Hora ${spokenTime(it)}" }
         if (state.city.isNotBlank()) parts += "Cidade ${state.city}"
         state.high?.let { parts += "Máxima $it graus" }
         state.low?.let { parts += "Mínima $it graus" }
