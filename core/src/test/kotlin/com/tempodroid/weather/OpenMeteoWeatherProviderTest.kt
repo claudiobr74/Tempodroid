@@ -2,6 +2,7 @@ package com.tempodroid.weather
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -39,5 +40,35 @@ class OpenMeteoWeatherProviderTest {
         assertEquals(953, data.surfacePressureHpa)
         assertEquals("America/Sao_Paulo", data.timezoneId)
         assertEquals(Instant.parse("2026-09-17T19:40:00Z"), data.timestamp)
+    }
+
+    @Test
+    fun mapsSnowCodesAsSnow() {
+        assertEquals(WeatherCondition.SNOW, WeatherCodeMapper.fromOpenMeteo(71))
+        assertEquals(WeatherCondition.SNOW, WeatherCodeMapper.fromOpenMeteo(75))
+        assertEquals(WeatherCondition.SNOW, WeatherCodeMapper.fromOpenMeteo(85))
+        assertEquals(WeatherCondition.SNOW, WeatherCodeMapper.fromOpenMeteo(86))
+    }
+
+    @Test
+    fun rejectsPayloadWithoutWeatherCode() {
+        val json = """
+            {"timezone":"America/Sao_Paulo",
+             "current":{"temperature_2m":27.6,"is_day":1,"time":"2026-09-17T16:40"}}
+        """.trimIndent()
+        assertThrows(IllegalArgumentException::class.java) {
+            OpenMeteoResponseParser.parse(json)
+        }
+    }
+
+    @Test
+    fun rejectsPayloadWithoutIsDay() {
+        val json = """
+            {"timezone":"America/Sao_Paulo",
+             "current":{"temperature_2m":27.6,"weather_code":0,"time":"2026-09-17T16:40"}}
+        """.trimIndent()
+        assertThrows(IllegalArgumentException::class.java) {
+            OpenMeteoResponseParser.parse(json)
+        }
     }
 }
