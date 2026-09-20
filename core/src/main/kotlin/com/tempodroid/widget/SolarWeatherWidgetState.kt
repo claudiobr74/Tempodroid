@@ -92,6 +92,11 @@ object WidgetStateMapper {
         val updatedAt = weather?.timestamp
         val stale = updatedAt == null ||
             java.time.Duration.between(updatedAt, clock).toHours() >= SolarWeatherWidgetState.STALE_AFTER_HOURS
+        val astronomicalDay = astronomy.sunPosition?.aboveHorizon ?: run {
+            val rise = astronomy.sunrise
+            val set = astronomy.sunset
+            rise != null && set != null && now.isAfter(rise) && now.isBefore(set)
+        }
         return SolarWeatherWidgetState(
             city = city,
             temperature = weather?.temperature,
@@ -109,7 +114,7 @@ object WidgetStateMapper {
             weatherCode = weather?.weatherCode,
             cloudCover = weather?.cloudCover,
             precipitation = weather?.precipitation,
-            isDay = weather?.isDay ?: (now.isAfter(astronomy.sunrise) && now.isBefore(astronomy.sunset)),
+            isDay = weather?.isDay ?: astronomicalDay,
             updatedAt = updatedAt,
             hasWeatherError = hasWeatherError,
             isStale = stale && weather != null,
