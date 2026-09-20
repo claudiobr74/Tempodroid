@@ -73,6 +73,9 @@ class WeatherUpdateWorker(
             runCatching {
                 container.weatherRepository.getWeather(location.latitude, location.longitude)
             }.onSuccess {
+                // Remove campos opcionais antigos antes de gravar o payload novo;
+                // assim um null real da API não deixa sensação/chuva/etc. obsoletos no cache.
+                container.cache.clearWeather(appWidgetId)
                 container.cache.saveWeather(it, appWidgetId)
                 weatherSucceeded = true
             }.onFailure {
