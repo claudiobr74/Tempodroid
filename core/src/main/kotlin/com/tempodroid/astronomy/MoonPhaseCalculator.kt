@@ -3,7 +3,7 @@ package com.tempodroid.astronomy
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.floor
-import kotlin.math.roundToInt
+import kotlin.math.min
 import kotlin.math.sin
 
 /**
@@ -18,11 +18,16 @@ object MoonPhaseCalculator {
     /** Julian Date da Lua nova de 2000-01-06 18:14 UTC. */
     const val KNOWN_NEW_MOON_JD = 2451550.259722
 
+    private const val MAJOR_PHASE_WINDOW_DAYS = 0.65
+
     fun lunarAgeDays(julianDate: Double): Double {
         val delta = julianDate - KNOWN_NEW_MOON_JD
         val age = delta % SYNODIC_MONTH_DAYS
         return if (age < 0) age + SYNODIC_MONTH_DAYS else age
     }
+
+    fun normalizedCycle(julianDate: Double): Double =
+        lunarAgeDays(julianDate) / SYNODIC_MONTH_DAYS
 
     /**
      * Fração iluminada 0.0..1.0 usando (1 - cos(2π · age / período)) / 2.
@@ -34,25 +39,44 @@ object MoonPhaseCalculator {
         return value.coerceIn(0.0, 1.0)
     }
 
-    fun isWaxing(julianDate: Double): Boolean {
-        val age = lunarAgeDays(julianDate)
-        return age < SYNODIC_MONTH_DAYS / 2.0
-    }
+    fun isWaxing(julianDate: Double): Boolean =
+        lunarAgeDays(julianDate) < SYNODIC_MONTH_DAYS / 2.0
 
+    /**
+     * Classificação nominal da fase baseada na idade sinódica real.
+     *
+     * As quatro fases principais recebem uma janela curta ao redor do instante
+     * astronômico correspondente. Fora dessa janela, a Lua é crescente/gibosa
+     * ou minguante/gibosa de acordo com sua posição no ciclo. Isso evita que
+     * uma Lua já claramente gibosa permaneça rotulada como "quarto".
+     */
     fun phase(julianDate: Double): MoonPhase {
         val age = lunarAgeDays(julianDate)
-        val index = ((age / SYNODIC_MONTH_DAYS) * 8.0).roundToInt() % 8
-        return MoonPhase.entries[index]
+        val quarter = SYNODIC_MONTH_DAYS / 4.0
+        val half = SYNODIC_MONTH_DAYS / 2.0
+        val threeQuarter = quarter * 3.0
+        val distanceToNew = min(age, SYNODIC_MONTH_DAYS - age)
+
+        return when {
+            distanceToNew <= MAJOR_PHASE_WINDOW_DAYS -> MoonPhase.NEW_MOON
+            kotlin.math.abs(age - quarter) <= MAJOR_PHASE_WINDOW_DAYS -> MoonPhase.FIRST_QUARTER
+            kotlin.math.abs(age - half) <= MAJOR_PHASE_WINDOW_DAYS -> MoonPhase.FULL_MOON
+            kotlin.math.abs(age - threeQuarter) <= MAJOR_PHASE_WINDOW_DAYS -> MoonPhase.LAST_QUARTER
+            age < quarter -> MoonPhase.WAXING_CRESCENT
+            age < half -> MoonPhase.WAXING_GIBBOUS
+            age < threeQuarter -> MoonPhase.WANING_GIBBOUS
+            else -> MoonPhase.WANING_CRESCENT
+        }
     }
 
     fun phaseFromIllumination(illumination: Double, waxing: Boolean): MoonPhase {
         val illum = illumination.coerceIn(0.0, 1.0)
         return when {
-            illum < 0.04 -> MoonPhase.NEW_MOON
-            illum < 0.35 -> if (waxing) MoonPhase.WAXING_CRESCENT else MoonPhase.WANING_CRESCENT
-            illum < 0.65 -> if (waxing) MoonPhase.FIRST_QUARTER else MoonPhase.LAST_QUARTER
-            illum < 0.96 -> if (waxing) MoonPhase.WAXING_GIBBOUS else MoonPhase.WANING_GIBBOUS
-            else -> MoonPhase.FULL_MOON
+            illum < 0.03 -> MoonPhase.NEW_MOON
+            illum > 0.97 -> MoonPhase.FULL_MOON
+            illum in 0.46..0.54 -> if (waxing) MoonPhase.FIRST_QUARTER else MoonPhase.LAST_QUARTER
+            illum < 0.5 -> if (waxing) MoonPhase.WAXING_CRESCENT else MoonPhase.WANING_CRESCENT
+            else -> if (waxing) MoonPhase.WAXING_GIBBOUS else MoonPhase.WANING_GIBBOUS
         }
     }
 
