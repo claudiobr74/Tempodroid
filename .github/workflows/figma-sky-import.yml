@@ -21,7 +21,7 @@ jobs:
           persist-credentials: true
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -35,24 +35,26 @@ jobs:
           mkdir -p "$D"
           fetch() {
             local name="$1" url="$2" size="$3"
-            curl -fsSL --retry 3 --retry-delay 1 "$url" -o "$D/$name.jpg"
-            test "$(stat -c%s "$D/$name.jpg")" -eq "$size"
+            echo "Importing $name"
+            curl -fL --retry 2 --retry-delay 1 "$url" -o "$D/$name.jpg"
+            actual="$(stat -c%s "$D/$name.jpg")"
+            test "$actual" -eq "$size" || { echo "$name: $actual bytes, expected $size"; exit 1; }
           }
-          fetch figma_sky_day_clear 'https://www.figma.com/api/mcp/asset/00829dfd-7192-4b5d-ae66-3292943fe948' 27420
-          fetch figma_sky_day_partly_cloudy 'https://www.figma.com/api/mcp/asset/c297558a-c2cb-4d37-beb4-f35cb5e7c977' 58731
-          fetch figma_sky_day_cloudy 'https://www.figma.com/api/mcp/asset/3310d01e-6f6c-4f0f-bf0c-2e4eda3b042c' 29810
-          fetch figma_sky_day_rain 'https://www.figma.com/api/mcp/asset/184ff205-8502-46c6-938c-9cac14224b1b' 24779
-          fetch figma_sky_day_storm 'https://www.figma.com/api/mcp/asset/fb518512-df63-4f50-b5d0-252438d6f9ca' 38799
-          fetch figma_sky_sunset_clear 'https://www.figma.com/api/mcp/asset/7d66badd-8ec1-4871-a97d-317183fb7ee7' 27801
-          fetch figma_sky_sunset_partly_cloudy 'https://www.figma.com/api/mcp/asset/43faaaf8-cddb-4d4e-840c-41f574b7e124' 42479
-          fetch figma_sky_sunset_cloudy 'https://www.figma.com/api/mcp/asset/57af140e-731a-444e-87b3-75f707390b30' 38399
-          fetch figma_sky_sunset_rain 'https://www.figma.com/api/mcp/asset/e15745f7-f67c-40ea-a763-a1e6417e81d9' 35389
-          fetch figma_sky_sunset_storm 'https://www.figma.com/api/mcp/asset/2cedcccf-adb8-4a63-9cc5-3d33a79ec1a2' 44823
-          fetch figma_sky_night_clear 'https://www.figma.com/api/mcp/asset/925daade-5b98-4eec-8162-bb9dfffc08a5' 38214
-          fetch figma_sky_night_partly_cloudy 'https://www.figma.com/api/mcp/asset/06b39465-fd16-42dc-8bed-b976b917620b' 37337
-          fetch figma_sky_night_cloudy 'https://www.figma.com/api/mcp/asset/4c6e340a-68fb-4b29-80ac-10012655da83' 23044
-          fetch figma_sky_night_rain 'https://www.figma.com/api/mcp/asset/00b1b151-2586-4779-8c5e-b6cdf7e13ea2' 34723
-          fetch figma_sky_night_storm 'https://www.figma.com/api/mcp/asset/4122cb6a-904a-41f3-8afd-c6918eccbf2f' 34709
+          fetch figma_sky_day_clear 'https://www.figma.com/api/mcp/asset/4eb8ca42-f717-4d44-926b-53a0f1adedf5' 27420
+          fetch figma_sky_day_partly_cloudy 'https://www.figma.com/api/mcp/asset/681dcb82-2ab2-4a42-ab15-37100a585be6' 58731
+          fetch figma_sky_day_cloudy 'https://www.figma.com/api/mcp/asset/f8a7ddee-ff33-4181-8906-d9b73fff36ed' 29810
+          fetch figma_sky_day_rain 'https://www.figma.com/api/mcp/asset/42c6b1af-3ec8-4eb2-b463-98cf533a3b52' 24779
+          fetch figma_sky_day_storm 'https://www.figma.com/api/mcp/asset/42237ffe-a6f3-451a-97ab-abcbaf501299' 38799
+          fetch figma_sky_sunset_clear 'https://www.figma.com/api/mcp/asset/578d2a0f-fa27-446b-984d-3220bb9edfd7' 27801
+          fetch figma_sky_sunset_partly_cloudy 'https://www.figma.com/api/mcp/asset/d2b8ebbf-3c3d-4df2-a39f-795516b48c47' 42479
+          fetch figma_sky_sunset_cloudy 'https://www.figma.com/api/mcp/asset/8223d488-4611-435d-9ca9-5061004e57ce' 38399
+          fetch figma_sky_sunset_rain 'https://www.figma.com/api/mcp/asset/3eb96aed-fbdb-4819-8a9e-f3a57fdf317f' 35389
+          fetch figma_sky_sunset_storm 'https://www.figma.com/api/mcp/asset/7dbccb37-d179-47b1-8cf1-f8bd3beb37ff' 44823
+          fetch figma_sky_night_clear 'https://www.figma.com/api/mcp/asset/f8537992-9d49-4fc1-a872-5e6ba4aae752' 38214
+          fetch figma_sky_night_partly_cloudy 'https://www.figma.com/api/mcp/asset/c2583268-adbb-4e79-9103-0b725e56f0c8' 37337
+          fetch figma_sky_night_cloudy 'https://www.figma.com/api/mcp/asset/23a6fe20-3fda-445f-baae-ad01e7748ed6' 23044
+          fetch figma_sky_night_rain 'https://www.figma.com/api/mcp/asset/b14786a9-87d2-4836-bd87-839de7f74294' 34723
+          fetch figma_sky_night_storm 'https://www.figma.com/api/mcp/asset/80433ad4-88e5-46ae-bfbf-a17f3ad689c6' 34709
           find "$D" -maxdepth 1 -type f -name 'figma_sky_*.png' -delete
           python3 scripts/verify_figma_visual_assets.py
 
