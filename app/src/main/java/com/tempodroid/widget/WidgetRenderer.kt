@@ -21,16 +21,10 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
-data class WidgetNowClockPlacement(
-    val centerXFraction: Float,
-    val topFraction: Float,
-)
-
 data class WidgetBitmaps(
     val sky: Bitmap,
     val timeline: Bitmap,
     val mode: WidgetLayoutMode,
-    val nowClockPlacement: WidgetNowClockPlacement? = null,
 )
 
 object WidgetRenderer {
@@ -149,8 +143,7 @@ object WidgetRenderer {
                 compact = compact,
                 moonSurface = moonSurface,
                 panelDarknessAlpha = timelineGlassAlpha,
-                // No widget real, o texto da hora é um TextClock nativo e nunca fica stale.
-                drawNowTime = !useLiveAstronomy,
+                drawNowTime = false,
             )
         } else {
             PolarTimelineRenderer.render(
@@ -160,27 +153,10 @@ object WidgetRenderer {
                 panelDarknessAlpha = timelineGlassAlpha,
             )
         }
-        val nowClockPlacement = if (useLiveAstronomy && hasSolarAnchors) {
-            SolarLunarTimelineRenderer.nowClockOverlayPlacement(
-                widthPx = timelineWidthPx,
-                heightPx = timelineHeightPx,
-                state = renderState,
-                now = now,
-                compact = compact,
-            ).let {
-                WidgetNowClockPlacement(
-                    centerXFraction = it.centerXFraction,
-                    topFraction = it.topFraction,
-                )
-            }
-        } else {
-            null
-        }
         val result = WidgetBitmaps(
             sky = sky,
             timeline = timeline,
             mode = mode,
-            nowClockPlacement = nowClockPlacement,
         )
         cache.put(key, result)
         return result

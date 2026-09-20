@@ -37,7 +37,6 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -166,36 +165,6 @@ private fun SolarWeatherContent(state: SolarWeatherWidgetState, appWidgetId: Int
                     contentScale = ContentScale.FillBounds,
                     modifier = GlanceModifier.fillMaxSize(),
                 )
-
-                // O texto HH:mm não pertence mais ao bitmap. TextClock atualiza
-                // sozinho a cada minuto, exatamente como o relógio superior.
-                bitmaps.nowClockPlacement?.let { placement ->
-                    val innerWidthDp = (
-                        size.width.value - WidgetDimensions.PADDING_DP * 2f
-                    ).coerceAtLeast(120f)
-                    val clockWidthDp = 56f
-                    val startDp = (
-                        placement.centerXFraction * innerWidthDp - clockWidthDp / 2f
-                    ).coerceIn(0f, (innerWidthDp - clockWidthDp).coerceAtLeast(0f))
-                    val topDp = (
-                        placement.topFraction * timelineHeightDp - 1f
-                    ).coerceIn(0f, (timelineHeightDp - 18f).coerceAtLeast(0f))
-
-                    Column(modifier = GlanceModifier.fillMaxSize()) {
-                        Spacer(GlanceModifier.height(topDp.dp))
-                        Row(modifier = GlanceModifier.fillMaxWidth()) {
-                            Spacer(GlanceModifier.width(startDp.dp))
-                            AndroidRemoteViews(
-                                remoteViews = liveClockRemoteViews(
-                                    context = context,
-                                    layoutId = R.layout.widget_timeline_text_clock,
-                                    viewId = R.id.widget_timeline_clock,
-                                    timezoneId = state.timezoneId,
-                                ),
-                            )
-                        }
-                    }
-                }
             }
             Spacer(GlanceModifier.height(4.dp))
 
@@ -238,8 +207,6 @@ private fun liveClockRemoteViews(
     viewId: Int,
     timezoneId: String,
 ): RemoteViews = RemoteViews(context.packageName, layoutId).apply {
-    // TextClock aceita setTimeZone(String) via RemoteViews. Isso mantém os dois
-    // relógios sincronizados com o mesmo fuso usado pela astronomia do widget.
     setString(viewId, "setTimeZone", timezoneId)
 }
 
