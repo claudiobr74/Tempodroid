@@ -39,8 +39,8 @@ class MainActivity : ComponentActivity() {
             isAppearanceLightNavigationBars = true
         }
 
-        // Mantém apenas a agenda periódica. A própria tela faz uma única
-        // consulta ao Open-Meteo; não disparamos um segundo refresh em paralelo.
+        // A tela lê exclusivamente o cache. O ciclo meteorológico pertence ao
+        // WorkManager; assim abrir/reabrir o app não duplica chamadas à API.
         WidgetUpdateCoordinator.ensurePeriodic(this)
 
         setContent {
@@ -73,33 +73,7 @@ class MainActivity : ComponentActivity() {
                     else -> widgets.firstOrNull()
                 }
                 primaryWidgetId = selected?.appWidgetId
-                val cached = selected?.state ?: container.cache.loadState()
-                primaryState = runCatching {
-                    val live = container.weatherRepository.getWeather(cached.latitude, cached.longitude)
-                    selected?.appWidgetId?.let { id ->
-                        container.cache.clearWeather(id)
-                        container.cache.saveWeather(live, id)
-                        // Redraw local; não faz nova consulta meteorológica.
-                        WidgetUpdateCoordinator.refreshAstronomyNow(this@MainActivity)
-                    }
-                    cached.copy(
-                        temperature = live.temperature ?: cached.temperature,
-                        condition = live.condition,
-                        high = live.high ?: cached.high,
-                        low = live.low ?: cached.low,
-                        rainChance = live.rainChance ?: cached.rainChance,
-                        cloudCover = live.cloudCover ?: cached.cloudCover,
-                        precipitation = live.precipitation ?: cached.precipitation,
-                        weatherCode = live.weatherCode ?: cached.weatherCode,
-                        isDay = live.isDay,
-                        updatedAt = live.timestamp ?: cached.updatedAt,
-                        apparentTemperature = live.apparentTemperature,
-                        relativeHumidity = live.relativeHumidity,
-                        windSpeedKmh = live.windSpeedKmh,
-                        surfacePressureHpa = live.surfacePressureHpa,
-                        hasWeatherError = false,
-                    )
-                }.getOrElse { cached }
+                primaryState = selected?.state ?: container.cache.loadState()
                 networkLabel = currentNetworkLabel()
             }
 
