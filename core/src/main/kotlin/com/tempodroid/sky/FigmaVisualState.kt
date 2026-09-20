@@ -1,7 +1,9 @@
 package com.tempodroid.sky
 
 import com.tempodroid.astronomy.MoonPhase
+import com.tempodroid.astronomy.minutesOf
 import com.tempodroid.weather.WeatherCondition
+import java.time.LocalTime
 
 enum class FigmaWeatherState {
     CLEAR,
@@ -45,6 +47,12 @@ data class FigmaMoonWeatherVariant(
     val moonPhase: MoonPhase,
 )
 
+data class FigmaBackgroundBlend(
+    val base: FigmaSkyState,
+    val overlay: FigmaSkyState? = null,
+    val overlayAlpha: Float = 0f,
+)
+
 /**
  * Fonte de verdade para traduzir o estado meteorológico/astronômico do app
  * para a arquitetura visual do arquivo final do Figma.
@@ -57,7 +65,7 @@ object FigmaVisualStateResolver {
     fun canonicalWeather(condition: WeatherCondition): FigmaWeatherState = when (condition) {
         WeatherCondition.CLEAR -> FigmaWeatherState.CLEAR
         WeatherCondition.PARTLY_CLOUDY -> FigmaWeatherState.PARTLY_CLOUDY
-        WeatherCondition.CLOUDY, WeatherCondition.FOG -> FigmaWeatherState.CLOUDY
+        WeatherCondition.CLOUDY, WeatherCondition.FOG, WeatherCondition.SNOW -> FigmaWeatherState.CLOUDY
         WeatherCondition.RAIN, WeatherCondition.HEAVY_RAIN -> FigmaWeatherState.RAIN
         WeatherCondition.STORM -> FigmaWeatherState.STORM
     }
@@ -84,6 +92,48 @@ object FigmaVisualStateResolver {
             FigmaMatrixPeriod.DAY -> dayBackground(weather)
             FigmaMatrixPeriod.TWILIGHT -> sunsetBackground(weather)
             FigmaMatrixPeriod.NIGHT -> nightBackground(weather)
+        }
+    }
+
+    /**
+     * Faz crossfade entre os três conjuntos de fundo nas janelas próximas ao
+     * nascer e ao ocaso. Isso evita a troca abrupta de JPEG quando o relógio
+     * cruza um limite de período, mantendo os 15 assets como fonte visual.
+     */
+    fun backgroundBlend(
+        now: LocalTime,
+        sunrise: LocalTime,
+        sunset: LocalTime,
+        condition: WeatherCondition,
+    ): FigmaBackgroundBlend {
+        val weather = canonicalWeather(condition)
+        val day = dayBackground(weather)
+        val twilight = sunsetBackground(weather)
+        val night = nightBackground(weather)
+        val nowM = minutesOf(now)
+        val rise = minutesOf(sunrise)
+        val set = minutesOf(sunset)
+
+        // Cenários extremos/polares são mantidos no comportamento discreto
+        // até o modelo solar fornecer explicitamente estado polar.
+        if (rise >= set || set - rise < 120) {
+            val period = DayPeriodCalculator.from(now, sunrise, sunset, null)
+            return FigmaBackgroundBlend(background(period, condition))
+        }
+
+        val dawnStart = (rise - 40).coerceAtLeast(0)
+        val dayStart = (rise + 45).coerceAtMost(set)
+        val sunsetStart = (set - 50).coerceAtLeast(dayStart)
+        val nightStart = (set + 40).coerceAtMost(24 * 60 - 1)
+
+        return when {
+            nowM < dawnStart -> FigmaBackgroundBlend(night)
+            nowM < rise -> blend(night, twilight, progress(nowM, dawnStart, rise))
+            nowM < dayStart -> blend(twilight, day, progress(nowM, rise, dayStart))
+            nowM < sunsetStart -> FigmaBackgroundBlend(day)
+            nowM < set -> blend(day, twilight, progress(nowM, sunsetStart, set))
+            nowM < nightStart -> blend(twilight, night, progress(nowM, set, nightStart))
+            else -> FigmaBackgroundBlend(night)
         }
     }
 
@@ -124,6 +174,21 @@ object FigmaVisualStateResolver {
         FigmaMatrixPeriod.DAY -> 48f / 160f
         FigmaMatrixPeriod.TWILIGHT -> 58f / 160f
         FigmaMatrixPeriod.NIGHT -> 66f / 160f
+    }
+
+    private fun blend(base: FigmaSkyState, overlay: FigmaSkyState, raw: Float): FigmaBackgroundBlend {
+        val t = raw.coerceIn(0f, 1f)
+        val smooth = t * t * (3f - 2f * t)
+        return when {
+            smooth <= 0.001f -> FigmaBackgroundBlend(base)
+            smooth >= 0.999f -> FigmaBackgroundBlend(overlay)
+            else -> FigmaBackgroundBlend(base, overlay, smooth)
+        }
+    }
+
+    private fun progress(now: Int, start: Int, end: Int): Float {
+        val span = (end - start).coerceAtLeast(1)
+        return ((now - start).toFloat() / span).coerceIn(0f, 1f)
     }
 
     private fun dayBackground(weather: FigmaWeatherState): FigmaSkyState = when (weather) {
