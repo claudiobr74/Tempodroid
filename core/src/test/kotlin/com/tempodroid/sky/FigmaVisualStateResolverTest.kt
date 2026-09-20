@@ -3,7 +3,9 @@ package com.tempodroid.sky
 import com.tempodroid.astronomy.MoonPhase
 import com.tempodroid.weather.WeatherCondition
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalTime
 
 class FigmaVisualStateResolverTest {
 
@@ -21,6 +23,7 @@ class FigmaVisualStateResolverTest {
     @Test
     fun `condicoes extras do provider convergem para os cinco estados`() {
         assertEquals(FigmaWeatherState.CLOUDY, FigmaVisualStateResolver.canonicalWeather(WeatherCondition.FOG))
+        assertEquals(FigmaWeatherState.CLOUDY, FigmaVisualStateResolver.canonicalWeather(WeatherCondition.SNOW))
         assertEquals(FigmaWeatherState.RAIN, FigmaVisualStateResolver.canonicalWeather(WeatherCondition.HEAVY_RAIN))
     }
 
@@ -73,6 +76,34 @@ class FigmaVisualStateResolverTest {
         }.toSet()
         assertEquals(15, states.size)
         assertEquals(FigmaSkyState.values().toSet(), states)
+    }
+
+    @Test
+    fun `crossfade do ocaso progride sem salto`() {
+        val before = FigmaVisualStateResolver.backgroundBlend(
+            now = LocalTime.of(17, 20),
+            sunrise = LocalTime.of(6, 10),
+            sunset = LocalTime.of(18, 10),
+            condition = WeatherCondition.CLEAR,
+        )
+        val middle = FigmaVisualStateResolver.backgroundBlend(
+            now = LocalTime.of(17, 45),
+            sunrise = LocalTime.of(6, 10),
+            sunset = LocalTime.of(18, 10),
+            condition = WeatherCondition.CLEAR,
+        )
+        val after = FigmaVisualStateResolver.backgroundBlend(
+            now = LocalTime.of(18, 30),
+            sunrise = LocalTime.of(6, 10),
+            sunset = LocalTime.of(18, 10),
+            condition = WeatherCondition.CLEAR,
+        )
+
+        assertEquals(FigmaSkyState.DAY_CLEAR, before.base)
+        assertEquals(FigmaSkyState.SUNSET_CLEAR, middle.overlay)
+        assertTrue(middle.overlayAlpha in 0.01f..0.99f)
+        assertEquals(FigmaSkyState.SUNSET_CLEAR, after.base)
+        assertEquals(FigmaSkyState.NIGHT_CLEAR, after.overlay)
     }
 
     @Test
