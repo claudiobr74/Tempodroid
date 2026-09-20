@@ -12,6 +12,7 @@ import com.tempodroid.sky.DynamicSkyRenderer
 import com.tempodroid.sky.FigmaVisualAssets
 import com.tempodroid.sky.SkyRenderInput
 import com.tempodroid.sky.TextProtectionOverlay
+import com.tempodroid.timeline.PolarTimelineRenderer
 import com.tempodroid.timeline.SolarLunarTimelineRenderer
 import com.tempodroid.ui.WidgetDimensions
 import com.tempodroid.ui.WidgetLayout
@@ -85,6 +86,7 @@ object WidgetRenderer {
                 moonset = astronomy.moonset,
                 moonPhase = astronomy.moonPhase,
                 moonIllumination = astronomy.moonIllumination,
+                isDay = astronomy.sunPosition?.aboveHorizon ?: state.isDay,
             )
         } ?: state
 
@@ -137,18 +139,28 @@ object WidgetRenderer {
         val timelineWidthPx = w - (32 * density).toInt()
         val timelineHeightPx = (WidgetDimensions.TIMELINE_HEIGHT_DP * density).toInt().coerceAtLeast(48)
         val compact = mode == WidgetLayoutMode.COMPACT
-        val timeline = SolarLunarTimelineRenderer.render(
-            widthPx = timelineWidthPx,
-            heightPx = timelineHeightPx,
-            state = renderState,
-            now = now,
-            compact = compact,
-            moonSurface = moonSurface,
-            panelDarknessAlpha = timelineGlassAlpha,
-            // No widget real, o texto da hora é um TextClock nativo e nunca fica stale.
-            drawNowTime = !useLiveAstronomy,
-        )
-        val nowClockPlacement = if (useLiveAstronomy) {
+        val hasSolarAnchors = renderState.sunrise != null && renderState.sunset != null
+        val timeline = if (hasSolarAnchors) {
+            SolarLunarTimelineRenderer.render(
+                widthPx = timelineWidthPx,
+                heightPx = timelineHeightPx,
+                state = renderState,
+                now = now,
+                compact = compact,
+                moonSurface = moonSurface,
+                panelDarknessAlpha = timelineGlassAlpha,
+                // No widget real, o texto da hora é um TextClock nativo e nunca fica stale.
+                drawNowTime = !useLiveAstronomy,
+            )
+        } else {
+            PolarTimelineRenderer.render(
+                widthPx = timelineWidthPx,
+                heightPx = timelineHeightPx,
+                isDay = renderState.isDay,
+                panelDarknessAlpha = timelineGlassAlpha,
+            )
+        }
+        val nowClockPlacement = if (useLiveAstronomy && hasSolarAnchors) {
             SolarLunarTimelineRenderer.nowClockOverlayPlacement(
                 widthPx = timelineWidthPx,
                 heightPx = timelineHeightPx,
