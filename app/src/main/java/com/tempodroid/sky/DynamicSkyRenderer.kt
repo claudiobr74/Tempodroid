@@ -5,18 +5,19 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
-import android.graphics.RectF
 import com.tempodroid.astronomy.MoonRenderStyle
 import com.tempodroid.ui.WidgetDimensions
-import com.tempodroid.weather.WeatherCondition
-import kotlin.math.sqrt
 
 /**
  * Renderer visual alinhado ao arquivo final do Figma.
  *
- * A camada base usa os dez rasters originais de DynamicSkyBackground. Sol,
- * nuvens, chuva, atmosfera e estrelas já fazem parte desses assets. A Lua
- * permanece astronômica/dinâmica e usa a textura fotográfica MoonVisual.
+ * A camada base usa os rasters de céu. A Lua permanece astronômica/dinâmica
+ * e é composta por cima do fundo com textura fotográfica e fase real.
+ *
+ * Importante: fundos raster não têm profundidade real. Portanto não tentamos
+ * "recortar" a Lua redesenhando faixas do background sobre ela. Esse truque
+ * produzia cortes horizontais artificiais no disco lunar. A presença da Lua
+ * em condições com nuvens é controlada somente pela opacidade meteorológica.
  */
 object DynamicSkyRenderer {
 
@@ -35,9 +36,7 @@ object DynamicSkyRenderer {
 
         val moon = input.moonPosition
         val moonVisibility = if (moon?.aboveHorizon == true) {
-            photographicMoonVisibility(
-                FigmaVisualStateResolver.moonOpacity(period, input.weatherCondition),
-            )
+            FigmaVisualStateResolver.moonOpacity(period, input.weatherCondition)
         } else {
             0f
         }
@@ -59,32 +58,10 @@ object DynamicSkyRenderer {
                 visibility = moonVisibility,
                 surfaceTexture = moonSurface ?: FigmaVisualAssets.moonSurface(context),
             )
-            redrawPhysicalCloudOcclusion(
-                canvas = canvas,
-                background = background,
-                targetWidth = w,
-                targetHeight = h,
-                moonX = moonX,
-                moonY = moonY,
-                moonRadius = radius,
-                condition = input.weatherCondition,
-                cloudCover = input.cloudCover,
-            )
         }
 
         TextProtectionOverlay.draw(canvas, bitmap, w, h)
         return bitmap
-    }
-
-    /**
-     * As opacidades do Figma continuam sendo a fonte de verdade, mas alpha
-     * linear subexpõe uma textura lunar real sobre um céu claro. A curva sqrt
-     * preserva 0 e 1 e recupera contraste nos valores intermediários sem
-     * transformar a Lua diurna em um disco opaco.
-     */
-    internal fun photographicMoonVisibility(baseOpacity: Float): Float {
-        val base = baseOpacity.coerceIn(0f, 1f)
-        return if (base <= 0f) 0f else sqrt(base)
     }
 
     private fun drawCenterCrop(canvas: Canvas, source: Bitmap, width: Int, height: Int) {
@@ -115,45 +92,5 @@ object DynamicSkyRenderer {
             val top = ((sourceHeight - cropHeight) / 2).coerceAtLeast(0)
             Rect(0, top, sourceWidth, top + cropHeight)
         }
-    }
-
-    /**
-     * As variantes finais WeatherWidget4x2 acrescentam nuvens físicas sobre a
-     * Lua em estados com cobertura. Reutilizamos a própria imagem Figma na
-     * região de oclusão para manter a textura atmosférica coerente.
-     */
-    private fun redrawPhysicalCloudOcclusion(
-        canvas: Canvas,
-        background: Bitmap,
-        targetWidth: Int,
-        targetHeight: Int,
-        moonX: Float,
-        moonY: Float,
-        moonRadius: Float,
-        condition: WeatherCondition,
-        cloudCover: Int?,
-    ) {
-        val base = when (condition) {
-            WeatherCondition.CLEAR -> 0f
-            WeatherCondition.PARTLY_CLOUDY -> 0.28f
-            WeatherCondition.CLOUDY -> 0.58f
-            WeatherCondition.FOG -> 0.68f
-            WeatherCondition.RAIN -> 0.72f
-            WeatherCondition.HEAVY_RAIN -> 0.82f
-            WeatherCondition.STORM -> 1f
-        }
-        if (base <= 0f) return
-        val cover = ((cloudCover ?: (base * 100).toInt()).coerceIn(0, 100) / 100f)
-        val fraction = (base * 0.65f + cover * 0.35f).coerceIn(0f, 1f)
-        if (fraction >= 0.98f) return
-
-        val left = moonX - moonRadius * 1.15f
-        val right = moonX + moonRadius * 1.15f
-        val top = moonY - moonRadius * 0.10f
-        val bottom = moonY + moonRadius * (0.25f + 1.45f * fraction)
-        canvas.save()
-        canvas.clipRect(RectF(left, top, right, bottom))
-        drawCenterCrop(canvas, background, targetWidth, targetHeight)
-        canvas.restore()
     }
 }
