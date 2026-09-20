@@ -36,7 +36,7 @@ object MoonRenderer {
         hemisphere: Hemisphere,
         style: MoonRenderStyle,
         surfaceTexture: Bitmap? = null,
-        ambientDarkness: Float = 1f,
+        ambientDarkness: Float = 0f,
     ): Bitmap {
         val size = sizePx.coerceIn(8, 256)
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -68,7 +68,7 @@ object MoonRenderer {
         style: MoonRenderStyle,
         visibility: Float,
         surfaceTexture: Bitmap? = null,
-        ambientDarkness: Float = 1f,
+        ambientDarkness: Float = 0f,
     ) {
         if (visibility <= 0.02f || radius < 1f) return
         val illum = illumination.coerceIn(0.0, 1.0)
@@ -224,7 +224,7 @@ object MoonRenderer {
         illumination: Double,
         visibility: Float,
         isSky: Boolean,
-        ambientDarkness: Float = 1f,
+        ambientDarkness: Float = 0f,
     ): Int {
         val v = visibility.coerceIn(0f, 1f)
         val darkness = ambientDarkness.coerceIn(0f, 1f)
