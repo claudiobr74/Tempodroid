@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
+import com.tempodroid.astronomy.CelestialPositionCalculator
 import com.tempodroid.astronomy.MoonRenderStyle
 import com.tempodroid.ui.WidgetDimensions
 
@@ -14,10 +15,9 @@ import com.tempodroid.ui.WidgetDimensions
  * A camada base usa os rasters de céu. A Lua permanece astronômica/dinâmica
  * e é composta por cima do fundo com textura fotográfica e fase real.
  *
- * Importante: fundos raster não têm profundidade real. Portanto não tentamos
- * "recortar" a Lua redesenhando faixas do background sobre ela. Esse truque
- * produzia cortes horizontais artificiais no disco lunar. A presença da Lua
- * em condições com nuvens é controlada somente pela opacidade meteorológica.
+ * Fundos raster não têm profundidade real. Portanto não tentamos "recortar"
+ * a Lua redesenhando faixas do background sobre ela; a presença da Lua em
+ * condições com nuvens é controlada somente pela opacidade meteorológica.
  */
 object DynamicSkyRenderer {
 
@@ -42,8 +42,21 @@ object DynamicSkyRenderer {
         }
 
         if (moon != null && moonVisibility > 0f) {
-            val moonX = moon.normalizedX * w
-            val moonY = moon.normalizedY * h * 0.70f
+            val projectedMoon = if (
+                moon.altitudeDegrees != null &&
+                moon.azimuthDegrees != null
+            ) {
+                CelestialPositionCalculator.fromHorizontalCoordinates(
+                    altitudeDegrees = moon.altitudeDegrees,
+                    azimuthDegrees = moon.azimuthDegrees,
+                    aboveHorizon = moon.aboveHorizon,
+                )
+            } else {
+                moon
+            }
+
+            val moonX = projectedMoon.normalizedX * w
+            val moonY = projectedMoon.normalizedY * h
             val moonComponentSize = h * FigmaVisualStateResolver.moonComponentSizeFraction(period)
             val radius = moonComponentSize * 0.34f
             MoonRenderer.draw(
@@ -57,11 +70,22 @@ object DynamicSkyRenderer {
                 style = MoonRenderStyle.SKY,
                 visibility = moonVisibility,
                 surfaceTexture = moonSurface ?: FigmaVisualAssets.moonSurface(context),
+                ambientDarkness = ambientDarkness(period),
             )
         }
 
         TextProtectionOverlay.draw(canvas, bitmap, w, h)
         return bitmap
+    }
+
+    private fun ambientDarkness(period: DayPeriod): Float = when (period) {
+        DayPeriod.NIGHT -> 1f
+        DayPeriod.TWILIGHT -> 0.72f
+        DayPeriod.DAWN -> 0.48f
+        DayPeriod.SUNSET -> 0.42f
+        DayPeriod.MORNING -> 0.14f
+        DayPeriod.AFTERNOON -> 0.08f
+        DayPeriod.DAY -> 0f
     }
 
     private fun drawCenterCrop(canvas: Canvas, source: Bitmap, width: Int, height: Int) {
