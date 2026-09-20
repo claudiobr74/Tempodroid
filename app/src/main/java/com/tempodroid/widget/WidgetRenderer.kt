@@ -54,9 +54,11 @@ object WidgetRenderer {
         val localDate = LocalDate.now(zone)
         val key = listOf(
             w, h, mode, localDate, now.hour, now.minute, useLiveAstronomy,
+            state.latitude, state.longitude, state.timezoneId,
             state.condition, state.moonPhase, state.moonIllumination,
             state.cloudCover, state.weatherCode, state.precipitation,
-            state.sunrise, state.sunset, state.city, state.isStale, state.hasWeatherError,
+            state.sunrise, state.sunset, state.solarNoon, state.moonrise, state.moonset,
+            state.city, state.isStale, state.hasWeatherError,
         ).joinToString("|")
         cache.get(key)?.let { return it }
 
