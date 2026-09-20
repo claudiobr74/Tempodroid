@@ -7,19 +7,28 @@ import org.junit.Test
 class DynamicSkyRendererVisibilityTest {
 
     @Test
-    fun photographicVisibilityKeepsInvisibleMoonInvisible() {
-        assertEquals(0f, DynamicSkyRenderer.photographicMoonVisibility(0f), 0f)
+    fun photographicSurfaceKeepsInvisibleMoonInvisible() {
+        assertEquals(0, MoonRenderer.photographicSurfaceAlpha(0f, isSky = true))
     }
 
     @Test
-    fun photographicVisibilityBoostsDayTextureWithoutMakingItOpaque() {
-        val boosted = DynamicSkyRenderer.photographicMoonVisibility(0.34f)
-        assertTrue(boosted > 0.55f)
-        assertTrue(boosted < 0.65f)
+    fun photographicSurfaceBoostsOnlyTheLitTextureDuringDay() {
+        val alpha = MoonRenderer.photographicSurfaceAlpha(0.34f, isSky = true)
+        assertTrue(alpha in 145..151)
     }
 
     @Test
-    fun photographicVisibilityPreservesFullNightOpacity() {
-        assertEquals(1f, DynamicSkyRenderer.photographicMoonVisibility(1f), 0f)
+    fun skyEarthshineStaysVerySubtleAtDayVisibility() {
+        val alpha = MoonRenderer.earthshineShadeAlpha(
+            illumination = 0.65,
+            visibility = 0.26f,
+            isSky = true,
+        )
+        assertTrue(alpha <= 2)
+    }
+
+    @Test
+    fun photographicSurfacePreservesFullNightOpacity() {
+        assertEquals(255, MoonRenderer.photographicSurfaceAlpha(1f, isSky = true))
     }
 }
