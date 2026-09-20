@@ -15,16 +15,17 @@ import com.tempodroid.astronomy.MoonPhaseCalculator
 import com.tempodroid.astronomy.MoonRenderStyle
 import com.tempodroid.astronomy.MoonTerminator
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * Disco lunar com máscara de terminador esférica.
  *
- * Quando [surfaceTexture] é fornecida, a superfície iluminada usa exatamente
- * a textura raster do componente MoonVisual do Figma. A mesma máscara
- * astronômica continua determinando fase, orientação e hemisfério.
+ * A superfície iluminada usa a textura fotográfica do MoonVisual. A fase,
+ * orientação e hemisfério permanecem astronômicos.
  *
- * A integração atmosférica evita qualquer "backplate" opaco: o earthshine e
- * o halo sempre respeitam [visibility] e permanecem sutis.
+ * No céu, a parte iluminada recebe reforço perceptual próprio, enquanto a
+ * parte não iluminada (earthshine) continua muito sutil. Isso evita o antigo
+ * "disco azul" sem voltar a deixar a textura lunar apagada durante o dia.
  */
 object MoonRenderer {
 
@@ -74,7 +75,12 @@ object MoonRenderer {
         val isSky = style == MoonRenderStyle.SKY
         val discBounds = RectF(cx - radius, cy - radius, cx + radius, cy + radius)
 
-        if (isSky && haloBoost > 0.2f && visibility > 0.4f) {
+        // Lua nova no céu não deve aparecer como um disco escuro artificial.
+        if (isSky && illum <= 0.03 && phase == MoonPhase.NEW_MOON) return
+
+        // Halo só aparece quando a Lua já tem presença suficiente no ambiente;
+        // em pleno dia ele desaparece, evitando aspecto de adesivo brilhante.
+        if (isSky && haloBoost > 0.2f && visibility > 0.55f) {
             val haloRadius = radius * (1.70f + 0.45f * haloBoost)
             val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 shader = RadialGradient(
@@ -82,8 +88,8 @@ object MoonRenderer {
                     cy,
                     haloRadius,
                     intArrayOf(
-                        Color.argb((36 * visibility * haloBoost).toInt(), 218, 228, 255),
-                        Color.argb((14 * visibility * haloBoost).toInt(), 180, 204, 255),
+                        Color.argb((30 * visibility * haloBoost).toInt(), 218, 228, 255),
+                        Color.argb((10 * visibility * haloBoost).toInt(), 180, 204, 255),
                         Color.TRANSPARENT,
                     ),
                     floatArrayOf(0f, 0.48f, 1f),
@@ -108,26 +114,38 @@ object MoonRenderer {
         if (illum <= 0.03 && phase == MoonPhase.NEW_MOON) return
 
         val litPath = illuminatedPath(cx, cy, radius, illum, lightFromRight)
+        val litAlpha = photographicSurfaceAlpha(visibility, isSky)
         canvas.save()
         canvas.clipPath(litPath)
         if (surfaceTexture != null && !surfaceTexture.isRecycled) {
             val texturePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-                alpha = (255 * visibility).toInt().coerceIn(0, 255)
+                alpha = litAlpha
             }
             canvas.drawBitmap(surfaceTexture, null, discBounds, texturePaint)
         } else {
             val lit = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb((255 * visibility).toInt().coerceIn(0, 255), 232, 236, 242)
+                color = Color.argb(litAlpha, 232, 236, 242)
             }
             canvas.drawPath(litPath, lit)
             val crater = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb((40 * visibility).toInt(), 160, 165, 180)
+                color = Color.argb((40 * visibility).toInt().coerceIn(0, 40), 160, 165, 180)
             }
             canvas.drawCircle(cx - radius * 0.22f, cy - radius * 0.18f, radius * 0.16f, crater)
             canvas.drawCircle(cx + radius * 0.18f, cy + radius * 0.12f, radius * 0.10f, crater)
             canvas.drawCircle(cx - radius * 0.05f, cy + radius * 0.28f, radius * 0.08f, crater)
         }
         canvas.restore()
+    }
+
+    /**
+     * Reforça somente a superfície iluminada da Lua no céu. O estado
+     * meteorológico continua controlando [visibility], mas o ganho não vaza
+     * para o earthshine nem para o halo.
+     */
+    internal fun photographicSurfaceAlpha(visibility: Float, isSky: Boolean): Int {
+        val v = visibility.coerceIn(0f, 1f)
+        val perceived = if (isSky) sqrt(v) else v
+        return (255f * perceived).toInt().coerceIn(0, 255)
     }
 
     private fun drawEarthshine(
@@ -146,30 +164,35 @@ object MoonRenderer {
         canvas.clipPath(disc)
 
         if (surfaceTexture != null && !surfaceTexture.isRecycled) {
-            val texturePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-                alpha = ((if (isSky) 30 else 46) * visibility).toInt().coerceIn(0, 64)
+            val textureAlpha = if (isSky) {
+                // Quadrático: praticamente invisível de dia, sutil à noite.
+                (16f * visibility.coerceIn(0f, 1f) * visibility.coerceIn(0f, 1f)).toInt()
+            } else {
+                (46f * visibility.coerceIn(0f, 1f)).toInt()
+            }.coerceIn(0, 64)
+            if (textureAlpha > 0) {
+                val texturePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+                    alpha = textureAlpha
+                }
+                canvas.drawBitmap(surfaceTexture, null, bounds, texturePaint)
             }
-            canvas.drawBitmap(surfaceTexture, null, bounds, texturePaint)
         }
 
-        /*
-         * Causa do artefato anterior: a camada azul-escura usava alpha 80..210
-         * sem multiplicar por visibility. Em Lua diurna/crepuscular ela ficava
-         * quase opaca e aparecia como um disco rígido atrás da fase iluminada.
-         */
         val shadeAlpha = earthshineShadeAlpha(
             illumination = illumination,
             visibility = visibility,
             isSky = isSky,
         )
-        val shade = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (isSky) {
-                Color.argb(shadeAlpha, 36, 50, 72)
-            } else {
-                Color.argb(shadeAlpha, 58, 68, 92)
+        if (shadeAlpha > 0) {
+            val shade = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = if (isSky) {
+                    Color.argb(shadeAlpha, 46, 54, 66)
+                } else {
+                    Color.argb(shadeAlpha, 58, 68, 92)
+                }
             }
+            canvas.drawCircle(cx, cy, radius, shade)
         }
-        canvas.drawCircle(cx, cy, radius, shade)
         canvas.restore()
     }
 
@@ -178,12 +201,13 @@ object MoonRenderer {
         visibility: Float,
         isSky: Boolean,
     ): Int {
-        val base = if (isSky) 42f else 60f
+        val v = visibility.coerceIn(0f, 1f)
         val phaseFactor = 1f - illumination.coerceIn(0.0, 1.0).toFloat() * 0.20f
-        val maxAlpha = if (isSky) 48 else 68
-        return (base * visibility.coerceIn(0f, 1f) * phaseFactor)
-            .toInt()
-            .coerceIn(0, maxAlpha)
+        return if (isSky) {
+            (24f * v * v * phaseFactor).toInt().coerceIn(0, 24)
+        } else {
+            (60f * v * phaseFactor).toInt().coerceIn(0, 68)
+        }
     }
 
     internal fun illuminatedPath(
