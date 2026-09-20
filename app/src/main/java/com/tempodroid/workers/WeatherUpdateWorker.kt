@@ -28,24 +28,39 @@ class WeatherUpdateWorker(
             AppWidgetManager.INVALID_APPWIDGET_ID,
         )
         val appWidgetIds = if (requestedId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-            listOf(requestedId)
+            if (WidgetUpdateCoordinator.isInstalledWidget(applicationContext, requestedId)) {
+                listOf(requestedId)
+            } else {
+                emptyList()
+            }
         } else {
-            glanceManager.getGlanceIds(SolarWeatherWidget::class.java)
-                .map { glanceManager.getAppWidgetId(it) }
+            WidgetUpdateCoordinator.installedWidgetIds(applicationContext).toList()
         }
 
+        if (appWidgetIds.isEmpty()) {
+            WidgetUpdateCoordinator.cancelAll(applicationContext)
+            return Result.success()
+        }
+
+        var hadWeatherFailure = false
         appWidgetIds.distinct().forEach { appWidgetId ->
-            runCatching { refreshWidget(appWidgetId, glanceManager) }
+            val success = runCatching {
+                refreshWidget(appWidgetId, glanceManager)
+            }.getOrElse {
+                hadWeatherFailure = true
+                false
+            }
+            if (!success) hadWeatherFailure = true
         }
 
         WidgetUpdateCoordinator.ensurePeriodic(applicationContext)
-        return Result.success()
+        return if (hadWeatherFailure) Result.retry() else Result.success()
     }
 
     private suspend fun refreshWidget(
         appWidgetId: Int,
         glanceManager: GlanceAppWidgetManager,
-    ) {
+    ): Boolean {
         val container = AppContainer.get(applicationContext)
         val location = container.locationRepository.resolve(
             appWidgetId = appWidgetId,
@@ -53,11 +68,13 @@ class WeatherUpdateWorker(
         )
         val now = Instant.now()
 
+        var weatherSucceeded = false
         val weather = if (isNetworkAvailable()) {
             runCatching {
                 container.weatherRepository.getWeather(location.latitude, location.longitude)
             }.onSuccess {
                 container.cache.saveWeather(it, appWidgetId)
+                weatherSucceeded = true
             }.onFailure {
                 container.cache.markWeatherError(appWidgetId)
             }.getOrNull()
@@ -101,6 +118,7 @@ class WeatherUpdateWorker(
             val glanceId = glanceManager.getGlanceIdBy(appWidgetId)
             SolarWeatherWidget().update(applicationContext, glanceId)
         }
+        return weatherSucceeded
     }
 
     private fun isNetworkAvailable(): Boolean {
@@ -108,6 +126,7 @@ class WeatherUpdateWorker(
             ?: return false
         val network = manager.activeNetwork ?: return false
         val capabilities = manager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 }
