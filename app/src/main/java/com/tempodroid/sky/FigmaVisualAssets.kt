@@ -8,12 +8,12 @@ import androidx.annotation.DrawableRes
 import com.tempodroid.R
 
 /**
- * Carregador dos assets raster originais do arquivo final do Figma.
- * Os backgrounds ficam em drawable-nodpi para evitar reamostragem automática
- * por densidade; o renderer decide o crop para o tamanho real do widget.
+ * Carregador dos 15 fundos raster atuais do DynamicSkyBackground no Figma.
+ * Os arquivos ficam em drawable-nodpi; o renderer controla o center-crop para
+ * as dimensões reais do widget sem reamostragem automática por densidade.
  */
 internal object FigmaVisualAssets {
-    private val skyCache = LruCache<Int, Bitmap>(3)
+    private val skyCache = LruCache<Int, Bitmap>(4)
 
     @Volatile
     private var moonSurfaceCache: Bitmap? = null
@@ -40,15 +40,20 @@ internal object FigmaVisualAssets {
 
     @DrawableRes
     private fun skyResource(state: FigmaSkyState): Int = when (state) {
-        FigmaSkyState.CLEAR_DAY -> R.drawable.figma_sky_clear_day
-        FigmaSkyState.PARTLY_CLOUDY -> R.drawable.figma_sky_partly_cloudy
-        FigmaSkyState.CLOUDY -> R.drawable.figma_sky_cloudy
-        FigmaSkyState.RAIN -> R.drawable.figma_sky_rain
-        FigmaSkyState.STORM -> R.drawable.figma_sky_storm
-        FigmaSkyState.SUNRISE -> R.drawable.figma_sky_sunrise
-        FigmaSkyState.SUNSET -> R.drawable.figma_sky_sunset
-        FigmaSkyState.CLEAR_NIGHT -> R.drawable.figma_sky_clear_night
-        FigmaSkyState.CLOUDY_NIGHT -> R.drawable.figma_sky_cloudy_night
-        FigmaSkyState.RAIN_NIGHT -> R.drawable.figma_sky_rain_night
+        FigmaSkyState.DAY_CLEAR -> R.drawable.figma_sky_day_clear
+        FigmaSkyState.DAY_PARTLY_CLOUDY -> R.drawable.figma_sky_day_partly_cloudy
+        FigmaSkyState.DAY_CLOUDY -> R.drawable.figma_sky_day_cloudy
+        FigmaSkyState.DAY_RAIN -> R.drawable.figma_sky_day_rain
+        FigmaSkyState.DAY_STORM -> R.drawable.figma_sky_day_storm
+        FigmaSkyState.SUNSET_CLEAR -> R.drawable.figma_sky_sunset_clear
+        FigmaSkyState.SUNSET_PARTLY_CLOUDY -> R.drawable.figma_sky_sunset_partly_cloudy
+        FigmaSkyState.SUNSET_CLOUDY -> R.drawable.figma_sky_sunset_cloudy
+        FigmaSkyState.SUNSET_RAIN -> R.drawable.figma_sky_sunset_rain
+        FigmaSkyState.SUNSET_STORM -> R.drawable.figma_sky_sunset_storm
+        FigmaSkyState.NIGHT_CLEAR -> R.drawable.figma_sky_night_clear
+        FigmaSkyState.NIGHT_PARTLY_CLOUDY -> R.drawable.figma_sky_night_partly_cloudy
+        FigmaSkyState.NIGHT_CLOUDY -> R.drawable.figma_sky_night_cloudy
+        FigmaSkyState.NIGHT_RAIN -> R.drawable.figma_sky_night_rain
+        FigmaSkyState.NIGHT_STORM -> R.drawable.figma_sky_night_storm
     }
 }

@@ -17,17 +17,26 @@ enum class FigmaMatrixPeriod {
     NIGHT,
 }
 
+/**
+ * Os 15 fundos atuais do componente DynamicSkyBackground no Figma:
+ * 5 condições × Dia / Entardecer / Noite.
+ */
 enum class FigmaSkyState {
-    CLEAR_DAY,
-    PARTLY_CLOUDY,
-    CLOUDY,
-    RAIN,
-    STORM,
-    SUNRISE,
-    SUNSET,
-    CLEAR_NIGHT,
-    CLOUDY_NIGHT,
-    RAIN_NIGHT,
+    DAY_CLEAR,
+    DAY_PARTLY_CLOUDY,
+    DAY_CLOUDY,
+    DAY_RAIN,
+    DAY_STORM,
+    SUNSET_CLEAR,
+    SUNSET_PARTLY_CLOUDY,
+    SUNSET_CLOUDY,
+    SUNSET_RAIN,
+    SUNSET_STORM,
+    NIGHT_CLEAR,
+    NIGHT_PARTLY_CLOUDY,
+    NIGHT_CLOUDY,
+    NIGHT_RAIN,
+    NIGHT_STORM,
 }
 
 data class FigmaMoonWeatherVariant(
@@ -41,7 +50,7 @@ data class FigmaMoonWeatherVariant(
  * para a arquitetura visual do arquivo final do Figma.
  *
  * MoonWeatherSky possui 5 condições × 3 períodos × 8 fases lunares = 120
- * variantes. DynamicSkyBackground possui dez rasters compartilhados.
+ * variantes. DynamicSkyBackground agora possui 15 rasters exclusivos.
  */
 object FigmaVisualStateResolver {
 
@@ -71,23 +80,16 @@ object FigmaVisualStateResolver {
 
     fun background(period: DayPeriod, condition: WeatherCondition): FigmaSkyState {
         val weather = canonicalWeather(condition)
-        return when (period) {
-            DayPeriod.DAWN -> when (weather) {
-                FigmaWeatherState.CLEAR, FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.SUNRISE
-                FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY
-                FigmaWeatherState.RAIN -> FigmaSkyState.RAIN
-                FigmaWeatherState.STORM -> FigmaSkyState.STORM
-            }
-
-            DayPeriod.MORNING, DayPeriod.DAY, DayPeriod.AFTERNOON -> dayBackground(weather)
-            DayPeriod.SUNSET, DayPeriod.TWILIGHT -> twilightBackground(weather)
-            DayPeriod.NIGHT -> nightBackground(weather)
+        return when (matrixPeriod(period)) {
+            FigmaMatrixPeriod.DAY -> dayBackground(weather)
+            FigmaMatrixPeriod.TWILIGHT -> sunsetBackground(weather)
+            FigmaMatrixPeriod.NIGHT -> nightBackground(weather)
         }
     }
 
     /**
-     * Opacidades lidas diretamente das 120 variantes MoonWeatherSky.
-     * Abaixo do horizonte o chamador ainda deve ocultar completamente a Lua.
+     * Opacidades da matriz MoonWeatherSky. Abaixo do horizonte o chamador
+     * continua ocultando completamente a Lua.
      */
     fun moonOpacity(period: DayPeriod, condition: WeatherCondition): Float {
         val weather = canonicalWeather(condition)
@@ -118,10 +120,6 @@ object FigmaVisualStateResolver {
         }
     }
 
-    /**
-     * Tamanho da instância MoonVisual em relação à altura de referência 160px:
-     * DAY 48px, TWILIGHT 58px e NIGHT 66px.
-     */
     fun moonComponentSizeFraction(period: DayPeriod): Float = when (matrixPeriod(period)) {
         FigmaMatrixPeriod.DAY -> 48f / 160f
         FigmaMatrixPeriod.TWILIGHT -> 58f / 160f
@@ -129,24 +127,26 @@ object FigmaVisualStateResolver {
     }
 
     private fun dayBackground(weather: FigmaWeatherState): FigmaSkyState = when (weather) {
-        FigmaWeatherState.CLEAR -> FigmaSkyState.CLEAR_DAY
-        FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.PARTLY_CLOUDY
-        FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY
-        FigmaWeatherState.RAIN -> FigmaSkyState.RAIN
-        FigmaWeatherState.STORM -> FigmaSkyState.STORM
+        FigmaWeatherState.CLEAR -> FigmaSkyState.DAY_CLEAR
+        FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.DAY_PARTLY_CLOUDY
+        FigmaWeatherState.CLOUDY -> FigmaSkyState.DAY_CLOUDY
+        FigmaWeatherState.RAIN -> FigmaSkyState.DAY_RAIN
+        FigmaWeatherState.STORM -> FigmaSkyState.DAY_STORM
     }
 
-    private fun twilightBackground(weather: FigmaWeatherState): FigmaSkyState = when (weather) {
-        FigmaWeatherState.CLEAR, FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.SUNSET
-        FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY_NIGHT
-        FigmaWeatherState.RAIN -> FigmaSkyState.RAIN_NIGHT
-        FigmaWeatherState.STORM -> FigmaSkyState.STORM
+    private fun sunsetBackground(weather: FigmaWeatherState): FigmaSkyState = when (weather) {
+        FigmaWeatherState.CLEAR -> FigmaSkyState.SUNSET_CLEAR
+        FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.SUNSET_PARTLY_CLOUDY
+        FigmaWeatherState.CLOUDY -> FigmaSkyState.SUNSET_CLOUDY
+        FigmaWeatherState.RAIN -> FigmaSkyState.SUNSET_RAIN
+        FigmaWeatherState.STORM -> FigmaSkyState.SUNSET_STORM
     }
 
     private fun nightBackground(weather: FigmaWeatherState): FigmaSkyState = when (weather) {
-        FigmaWeatherState.CLEAR -> FigmaSkyState.CLEAR_NIGHT
-        FigmaWeatherState.PARTLY_CLOUDY, FigmaWeatherState.CLOUDY -> FigmaSkyState.CLOUDY_NIGHT
-        FigmaWeatherState.RAIN -> FigmaSkyState.RAIN_NIGHT
-        FigmaWeatherState.STORM -> FigmaSkyState.STORM
+        FigmaWeatherState.CLEAR -> FigmaSkyState.NIGHT_CLEAR
+        FigmaWeatherState.PARTLY_CLOUDY -> FigmaSkyState.NIGHT_PARTLY_CLOUDY
+        FigmaWeatherState.CLOUDY -> FigmaSkyState.NIGHT_CLOUDY
+        FigmaWeatherState.RAIN -> FigmaSkyState.NIGHT_RAIN
+        FigmaWeatherState.STORM -> FigmaSkyState.NIGHT_STORM
     }
 }
