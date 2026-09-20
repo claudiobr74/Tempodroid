@@ -42,13 +42,12 @@ object DynamicSkyRenderer {
         }
 
         if (moon != null && moonVisibility > 0f) {
-            val projectedMoon = if (
-                moon.altitudeDegrees != null &&
-                moon.azimuthDegrees != null
-            ) {
+            val altitudeDegrees = moon.altitudeDegrees
+            val azimuthDegrees = moon.azimuthDegrees
+            val projectedMoon = if (altitudeDegrees != null && azimuthDegrees != null) {
                 CelestialPositionCalculator.fromHorizontalCoordinates(
-                    altitudeDegrees = moon.altitudeDegrees,
-                    azimuthDegrees = moon.azimuthDegrees,
+                    altitudeDegrees = altitudeDegrees,
+                    azimuthDegrees = azimuthDegrees,
                     aboveHorizon = moon.aboveHorizon,
                 )
             } else {
