@@ -9,6 +9,7 @@ enum class WeatherCondition {
     CLOUDY,
     RAIN,
     HEAVY_RAIN,
+    SNOW,
     STORM,
     FOG
 }
