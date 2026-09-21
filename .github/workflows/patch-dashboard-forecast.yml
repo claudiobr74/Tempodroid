@@ -17,235 +17,28 @@ jobs:
         with:
           ref: feature/dashboard-forecast
       - name: Patch dashboard UI
+        env:
+          FORECAST_BLOCK_B64: QENvbXBvc2FibGUKcHJpdmF0ZSBmdW4gTGlnaHRXZWF0aGVyQ2FyZChzdGF0ZTogU29sYXJXZWF0aGVyV2lkZ2V0U3RhdGUsIGZvcmVjYXN0OiBGb3JlY2FzdFNuYXBzaG90KSB7CiAgICB2YWwgem9uZSA9IHJ1bkNhdGNoaW5nIHsgWm9uZUlkLm9mKHN0YXRlLnRpbWV6b25lSWQpIH0uZ2V0T3JEZWZhdWx0KFpvbmVJZC5zeXN0ZW1EZWZhdWx0KCkpCiAgICB2YWwgbm93ID0gSW5zdGFudC5ub3coKS5hdFpvbmUoem9uZSkKICAgIHZhbCB0b2RheSA9IG5vdy50b0xvY2FsRGF0ZSgpCiAgICB2YWwgaG91cmx5ID0gZm9yZWNhc3QuaG91cmx5CiAgICAgICAgLmZpbHRlciB7IGl0ZW0gLT4KICAgICAgICAgICAgdmFsIGxvY2FsID0gaXRlbS50aW1lLmF0Wm9uZSh6b25lKQogICAgICAgICAgICBsb2NhbC50b0xvY2FsRGF0ZSgpID09IHRvZGF5ICYmICFpdGVtLnRpbWUuaXNCZWZvcmUobm93LnRvSW5zdGFudCgpKQogICAgICAgIH0KICAgIHZhbCBuZXh0RGF5cyA9IGZvcmVjYXN0LmRhaWx5LmZpbHRlciB7IGl0LmRhdGUuaXNBZnRlcih0b2RheSkgfS50YWtlKDUpCgogICAgQ29sdW1uKAogICAgICAgIG1vZGlmaWVyID0gTW9kaWZpZXIKICAgICAgICAgICAgLmZpbGxNYXhXaWR0aCgpCiAgICAgICAgICAgIC5iYWNrZ3JvdW5kKExpZ2h0U3VyZmFjZSwgUm91bmRlZENvcm5lclNoYXBlKDIwLmRwKSkKICAgICAgICAgICAgLmJvcmRlcigxLmRwLCBMaWdodEJvcmRlciwgUm91bmRlZENvcm5lclNoYXBlKDIwLmRwKSkKICAgICAgICAgICAgLnBhZGRpbmcoMTYuZHApLAogICAgICAgIHZlcnRpY2FsQXJyYW5nZW1lbnQgPSBBcnJhbmdlbWVudC5zcGFjZWRCeSgxNC5kcCksCiAgICApIHsKICAgICAgICBSb3coCiAgICAgICAgICAgIG1vZGlmaWVyID0gTW9kaWZpZXIuZmlsbE1heFdpZHRoKCksCiAgICAgICAgICAgIHZlcnRpY2FsQWxpZ25tZW50ID0gQWxpZ25tZW50LkNlbnRlclZlcnRpY2FsbHksCiAgICAgICAgICAgIGhvcml6b250YWxBcnJhbmdlbWVudCA9IEFycmFuZ2VtZW50LlNwYWNlQmV0d2VlbiwKICAgICAgICApIHsKICAgICAgICAgICAgQ29sdW1uIHsKICAgICAgICAgICAgICAgIFRleHQoIiR7c3RhdGUudGVtcGVyYXR1cmUgPzogIi0tIn3CsCIsIGZvbnRTaXplID0gMzguc3AsIGZvbnRXZWlnaHQgPSBGb250V2VpZ2h0LkJvbGQsIGNvbG9yID0gTGlnaHRUZXh0KQogICAgICAgICAgICAgICAgVGV4dCgKICAgICAgICAgICAgICAgICAgICAiU2Vuc2HDp8OjbyAke3N0YXRlLmFwcGFyZW50VGVtcGVyYXR1cmU/LmxldCB7ICIkaXTCsCIgfSA/OiAiLS0ifSIsCiAgICAgICAgICAgICAgICAgICAgY29sb3IgPSBMaWdodFRleHRTZWNvbmRhcnksCiAgICAgICAgICAgICAgICAgICAgZm9udFNpemUgPSAxMy5zcCwKICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgfQogICAgICAgICAgICBDb2x1bW4oCiAgICAgICAgICAgICAgICBtb2RpZmllciA9IE1vZGlmaWVyCiAgICAgICAgICAgICAgICAgICAgLmJhY2tncm91bmQoTGlnaHRBY3RpdmUsIFJvdW5kZWRDb3JuZXJTaGFwZSgxNC5kcCkpCiAgICAgICAgICAgICAgICAgICAgLnBhZGRpbmcoaG9yaXpvbnRhbCA9IDE0LmRwLCB2ZXJ0aWNhbCA9IDEyLmRwKSwKICAgICAgICAgICAgICAgIGhvcml6b250YWxBbGlnbm1lbnQgPSBBbGlnbm1lbnQuRW5kLAogICAgICAgICAgICApIHsKICAgICAgICAgICAgICAgIFRleHQoCiAgICAgICAgICAgICAgICAgICAgV2VhdGhlckNvZGVNYXBwZXIubGFiZWxQdChzdGF0ZS5jb25kaXRpb24sIHN0YXRlLmlzRGF5KSwKICAgICAgICAgICAgICAgICAgICBjb2xvciA9IExpZ2h0QWNjZW50U3Ryb25nLAogICAgICAgICAgICAgICAgICAgIGZvbnRTaXplID0gMTUuc3AsCiAgICAgICAgICAgICAgICAgICAgZm9udFdlaWdodCA9IEZvbnRXZWlnaHQuU2VtaUJvbGQsCiAgICAgICAgICAgICAgICAgICAgdGV4dEFsaWduID0gVGV4dEFsaWduLkVuZCwKICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgIFRleHQoc3RhdGUuY2l0eSwgY29sb3IgPSBMaWdodFRleHRTZWNvbmRhcnksIGZvbnRTaXplID0gMTIuc3ApCiAgICAgICAgICAgIH0KICAgICAgICB9CgogICAgICAgIFJvdyhob3Jpem9udGFsQXJyYW5nZW1lbnQgPSBBcnJhbmdlbWVudC5zcGFjZWRCeSgxMC5kcCksIG1vZGlmaWVyID0gTW9kaWZpZXIuZmlsbE1heFdpZHRoKCkpIHsKICAgICAgICAgICAgTGlnaHREZXRhaWxDZWxsKEljb25zLk91dGxpbmVkLkFpciwgIlZlbnRvIiwgc3RhdGUud2luZFNwZWVkS21oPy5sZXQgeyAiJGl0IGttL2giIH0gPzogIi0tIiwgTW9kaWZpZXIud2VpZ2h0KDFmKSkKICAgICAgICAgICAgTGlnaHREZXRhaWxDZWxsKEljb25zLk91dGxpbmVkLkNsb3VkLCAiQ2h1dmEiLCBzdGF0ZS5yYWluQ2hhbmNlPy5sZXQgeyAiJGl0JSIgfSA/OiAiLS0iLCBNb2RpZmllci53ZWlnaHQoMWYpKQogICAgICAgIH0KCiAgICAgICAgaWYgKGhvdXJseS5pc05vdEVtcHR5KCkpIHsKICAgICAgICAgICAgTGlnaHRIb3VybHlGb3JlY2FzdFN0cmlwKGhvdXJseSwgc3RhdGUsIHpvbmUpCiAgICAgICAgfQogICAgICAgIGlmIChuZXh0RGF5cy5pc05vdEVtcHR5KCkpIHsKICAgICAgICAgICAgTGlnaHRGaXZlRGF5Rm9yZWNhc3QobmV4dERheXMpCiAgICAgICAgfQogICAgICAgIGlmIChob3VybHkuaXNFbXB0eSgpICYmIG5leHREYXlzLmlzRW1wdHkoKSkgewogICAgICAgICAgICBUZXh0KAogICAgICAgICAgICAgICAgIkEgcHJldmlzw6NvIGRldGFsaGFkYSBhcGFyZWNlcsOhIGFww7NzIGEgcHLDs3hpbWEgYXR1YWxpemHDp8OjbyBkbyBjbGltYS4iLAogICAgICAgICAgICAgICAgY29sb3IgPSBMaWdodFRleHRTZWNvbmRhcnksCiAgICAgICAgICAgICAgICBmb250U2l6ZSA9IDEyLnNwLAogICAgICAgICAgICApCiAgICAgICAgfQogICAgfQp9CgpAQ29tcG9zYWJsZQpwcml2YXRlIGZ1biBMaWdodERldGFpbENlbGwoaWNvbjogSW1hZ2VWZWN0b3IsIGxhYmVsOiBTdHJpbmcsIHZhbHVlOiBTdHJpbmcsIG1vZGlmaWVyOiBNb2RpZmllcikgewogICAgUm93KAogICAgICAgIG1vZGlmaWVyID0gbW9kaWZpZXIKICAgICAgICAgICAgLmJhY2tncm91bmQoTGlnaHRTdXJmYWNlQWx0LCBSb3VuZGVkQ29ybmVyU2hhcGUoMTIuZHApKQogICAgICAgICAgICAucGFkZGluZyhob3Jpem9udGFsID0gMTIuZHAsIHZlcnRpY2FsID0gMTAuZHApLAogICAgICAgIHZlcnRpY2FsQWxpZ25tZW50ID0gQWxpZ25tZW50LkNlbnRlclZlcnRpY2FsbHksCiAgICApIHsKICAgICAgICBJY29uKGljb24sIG51bGwsIHRpbnQgPSBMaWdodEFjY2VudCwgbW9kaWZpZXIgPSBNb2RpZmllci5zaXplKDE4LmRwKSkKICAgICAgICBTcGFjZXIoTW9kaWZpZXIud2lkdGgoOS5kcCkpCiAgICAgICAgQ29sdW1uIHsKICAgICAgICAgICAgVGV4dChsYWJlbCwgY29sb3IgPSBMaWdodFRleHRTZWNvbmRhcnksIGZvbnRTaXplID0gMTEuc3ApCiAgICAgICAgICAgIFRleHQodmFsdWUsIGNvbG9yID0gTGlnaHRUZXh0LCBmb250U2l6ZSA9IDEzLnNwLCBmb250V2VpZ2h0ID0gRm9udFdlaWdodC5TZW1pQm9sZCkKICAgICAgICB9CiAgICB9Cn0KCkBDb21wb3NhYmxlCnByaXZhdGUgZnVuIExpZ2h0SG91cmx5Rm9yZWNhc3RTdHJpcCgKICAgIGhvdXJseTogTGlzdDxIb3VybHlGb3JlY2FzdD4sCiAgICBzdGF0ZTogU29sYXJXZWF0aGVyV2lkZ2V0U3RhdGUsCiAgICB6b25lOiBab25lSWQsCikgewogICAgQ29sdW1uKHZlcnRpY2FsQXJyYW5nZW1lbnQgPSBBcnJhbmdlbWVudC5zcGFjZWRCeSg4LmRwKSkgewogICAgICAgIFRleHQoIkhvamUgwrcgcG9yIGhvcmEiLCBjb2xvciA9IExpZ2h0VGV4dCwgZm9udFNpemUgPSAxNC5zcCwgZm9udFdlaWdodCA9IEZvbnRXZWlnaHQuU2VtaUJvbGQpCiAgICAgICAgUm93KAogICAgICAgICAgICBtb2RpZmllciA9IE1vZGlmaWVyLmZpbGxNYXhXaWR0aCgpLmhvcml6b250YWxTY3JvbGwocmVtZW1iZXJTY3JvbGxTdGF0ZSgpKSwKICAgICAgICAgICAgaG9yaXpvbnRhbEFycmFuZ2VtZW50ID0gQXJyYW5nZW1lbnQuc3BhY2VkQnkoOC5kcCksCiAgICAgICAgKSB7CiAgICAgICAgICAgIGhvdXJseS5mb3JFYWNoIHsgaXRlbSAtPgogICAgICAgICAgICAgICAgdmFsIGxvY2FsVGltZSA9IGl0ZW0udGltZS5hdFpvbmUoem9uZSkudG9Mb2NhbFRpbWUoKQogICAgICAgICAgICAgICAgdmFsIGlzRGF5ID0gbGlnaHRGb3JlY2FzdElzRGF5KGxvY2FsVGltZSwgc3RhdGUpCiAgICAgICAgICAgICAgICBDb2x1bW4oCiAgICAgICAgICAgICAgICAgICAgbW9kaWZpZXIgPSBNb2RpZmllcgogICAgICAgICAgICAgICAgICAgICAgICAud2lkdGgoNjYuZHApCiAgICAgICAgICAgICAgICAgICAgICAgIC5iYWNrZ3JvdW5kKExpZ2h0U3VyZmFjZUFsdCwgUm91bmRlZENvcm5lclNoYXBlKDEyLmRwKSkKICAgICAgICAgICAgICAgICAgICAgICAgLnBhZGRpbmcodmVydGljYWwgPSA5LmRwLCBob3Jpem9udGFsID0gNi5kcCksCiAgICAgICAgICAgICAgICAgICAgaG9yaXpvbnRhbEFsaWdubWVudCA9IEFsaWdubWVudC5DZW50ZXJIb3Jpem9udGFsbHksCiAgICAgICAgICAgICAgICAgICAgdmVydGljYWxBcnJhbmdlbWVudCA9IEFycmFuZ2VtZW50LnNwYWNlZEJ5KDMuZHApLAogICAgICAgICAgICAgICAgKSB7CiAgICAgICAgICAgICAgICAgICAgVGV4dCgiJHtsb2NhbFRpbWUuaG91ci50b1N0cmluZygpLnBhZFN0YXJ0KDIsICcwJyl9aCIsIGNvbG9yID0gTGlnaHRUZXh0U2Vjb25kYXJ5LCBmb250U2l6ZSA9IDExLnNwKQogICAgICAgICAgICAgICAgICAgIFRleHQobGlnaHRXZWF0aGVyR2x5cGgoaXRlbS5jb25kaXRpb24sIGlzRGF5KSwgZm9udFNpemUgPSAyMC5zcCkKICAgICAgICAgICAgICAgICAgICBUZXh0KGl0ZW0udGVtcGVyYXR1cmU/LmxldCB7ICIkaXTCsCIgfSA/OiAiLS0iLCBjb2xvciA9IExpZ2h0VGV4dCwgZm9udFNpemUgPSAxNC5zcCwgZm9udFdlaWdodCA9IEZvbnRXZWlnaHQuQm9sZCkKICAgICAgICAgICAgICAgICAgICBUZXh0KAogICAgICAgICAgICAgICAgICAgICAgICBpdGVtLnJhaW5DaGFuY2U/LmxldCB7ICLwn5KnICRpdCUiIH0gPzogIvCfkqcgLS0iLAogICAgICAgICAgICAgICAgICAgICAgICBjb2xvciA9IExpZ2h0QWNjZW50U3Ryb25nLAogICAgICAgICAgICAgICAgICAgICAgICBmb250U2l6ZSA9IDEwLnNwLAogICAgICAgICAgICAgICAgICAgICAgICBtYXhMaW5lcyA9IDEsCiAgICAgICAgICAgICAgICAgICAgKQogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgfQogICAgfQp9CgpAQ29tcG9zYWJsZQpwcml2YXRlIGZ1biBMaWdodEZpdmVEYXlGb3JlY2FzdChkYXlzOiBMaXN0PERhaWx5Rm9yZWNhc3Q+KSB7CiAgICBDb2x1bW4odmVydGljYWxBcnJhbmdlbWVudCA9IEFycmFuZ2VtZW50LnNwYWNlZEJ5KDguZHApKSB7CiAgICAgICAgVGV4dCgiUHLDs3hpbW9zIDUgZGlhcyIsIGNvbG9yID0gTGlnaHRUZXh0LCBmb250U2l6ZSA9IDE0LnNwLCBmb250V2VpZ2h0ID0gRm9udFdlaWdodC5TZW1pQm9sZCkKICAgICAgICBkYXlzLmZvckVhY2ggeyBkYXkgLT4KICAgICAgICAgICAgUm93KAogICAgICAgICAgICAgICAgbW9kaWZpZXIgPSBNb2RpZmllcgogICAgICAgICAgICAgICAgICAgIC5maWxsTWF4V2lkdGgoKQogICAgICAgICAgICAgICAgICAgIC5iYWNrZ3JvdW5kKExpZ2h0U3VyZmFjZUFsdCwgUm91bmRlZENvcm5lclNoYXBlKDEyLmRwKSkKICAgICAgICAgICAgICAgICAgICAucGFkZGluZyhob3Jpem9udGFsID0gMTIuZHAsIHZlcnRpY2FsID0gOS5kcCksCiAgICAgICAgICAgICAgICB2ZXJ0aWNhbEFsaWdubWVudCA9IEFsaWdubWVudC5DZW50ZXJWZXJ0aWNhbGx5LAogICAgICAgICAgICApIHsKICAgICAgICAgICAgICAgIENvbHVtbihNb2RpZmllci53aWR0aCg3NC5kcCkpIHsKICAgICAgICAgICAgICAgICAgICBUZXh0KGxpZ2h0Rm9yZWNhc3REYXlMYWJlbChkYXkuZGF0ZSksIGNvbG9yID0gTGlnaHRUZXh0LCBmb250U2l6ZSA9IDEyLnNwLCBmb250V2VpZ2h0ID0gRm9udFdlaWdodC5TZW1pQm9sZCkKICAgICAgICAgICAgICAgICAgICBUZXh0KGRheS5kYXRlLmZvcm1hdChEYXRlVGltZUZvcm1hdHRlci5vZlBhdHRlcm4oImRkL01NIikpLCBjb2xvciA9IExpZ2h0VGV4dFNlY29uZGFyeSwgZm9udFNpemUgPSAxMC5zcCkKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIFRleHQobGlnaHRXZWF0aGVyR2x5cGgoZGF5LmNvbmRpdGlvbiwgdHJ1ZSksIGZvbnRTaXplID0gMjAuc3AsIG1vZGlmaWVyID0gTW9kaWZpZXIud2lkdGgoMzguZHApKQogICAgICAgICAgICAgICAgVGV4dCgKICAgICAgICAgICAgICAgICAgICAiJHtkYXkubG93Py5sZXQgeyAiJGl0wrAiIH0gPzogIi0tIn0gIC8gICR7ZGF5LmhpZ2g/LmxldCB7ICIkaXTCsCIgfSA/OiAiLS0ifSIsCiAgICAgICAgICAgICAgICAgICAgY29sb3IgPSBMaWdodFRleHQsCiAgICAgICAgICAgICAgICAgICAgZm9udFNpemUgPSAxMi5zcCwKICAgICAgICAgICAgICAgICAgICBmb250V2VpZ2h0ID0gRm9udFdlaWdodC5TZW1pQm9sZCwKICAgICAgICAgICAgICAgICAgICBtb2RpZmllciA9IE1vZGlmaWVyLndlaWdodCgxZiksCiAgICAgICAgICAgICAgICApCiAgICAgICAgICAgICAgICBUZXh0KAogICAgICAgICAgICAgICAgICAgIGRheS5yYWluQ2hhbmNlPy5sZXQgeyAi8J+SpyAkaXQlIiB9ID86ICLwn5KnIC0tIiwKICAgICAgICAgICAgICAgICAgICBjb2xvciA9IExpZ2h0QWNjZW50U3Ryb25nLAogICAgICAgICAgICAgICAgICAgIGZvbnRTaXplID0gMTEuc3AsCiAgICAgICAgICAgICAgICApCiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9Cn0KCnByaXZhdGUgZnVuIGxpZ2h0Rm9yZWNhc3RJc0RheSh0aW1lOiBMb2NhbFRpbWUsIHN0YXRlOiBTb2xhcldlYXRoZXJXaWRnZXRTdGF0ZSk6IEJvb2xlYW4gewogICAgdmFsIHN1bnJpc2UgPSBzdGF0ZS5zdW5yaXNlCiAgICB2YWwgc3Vuc2V0ID0gc3RhdGUuc3Vuc2V0CiAgICByZXR1cm4gaWYgKHN1bnJpc2UgIT0gbnVsbCAmJiBzdW5zZXQgIT0gbnVsbCkgewogICAgICAgICF0aW1lLmlzQmVmb3JlKHN1bnJpc2UpICYmIHRpbWUuaXNCZWZvcmUoc3Vuc2V0KQogICAgfSBlbHNlIHsKICAgICAgICB0aW1lLmhvdXIgaW4gNi4uMTcKICAgIH0KfQoKcHJpdmF0ZSBmdW4gbGlnaHRXZWF0aGVyR2x5cGgoY29uZGl0aW9uOiBXZWF0aGVyQ29uZGl0aW9uLCBpc0RheTogQm9vbGVhbik6IFN0cmluZyA9IHdoZW4gKGNvbmRpdGlvbikgewogICAgV2VhdGhlckNvbmRpdGlvbi5DTEVBUiAtPiBpZiAoaXNEYXkpICLimIDvuI8iIGVsc2UgIvCfjJkiCiAgICBXZWF0aGVyQ29uZGl0aW9uLlBBUlRMWV9DTE9VRFkgLT4gaWYgKGlzRGF5KSAi8J+MpO+4jyIgZWxzZSAi4piB77iPIgogICAgV2VhdGhlckNvbmRpdGlvbi5DTE9VRFkgLT4gIuKYge+4jyIKICAgIFdlYXRoZXJDb25kaXRpb24uUkFJTiAtPiAi8J+Mpu+4jyIKICAgIFdlYXRoZXJDb25kaXRpb24uSEVBVllfUkFJTiAtPiAi8J+Mp++4jyIKICAgIFdlYXRoZXJDb25kaXRpb24uU05PVyAtPiAi8J+MqO+4jyIKICAgIFdlYXRoZXJDb25kaXRpb24uU1RPUk0gLT4gIuKbiO+4jyIKICAgIFdlYXRoZXJDb25kaXRpb24uRk9HIC0+ICLwn4yr77iPIgp9Cgpwcml2YXRlIGZ1biBsaWdodEZvcmVjYXN0RGF5TGFiZWwoZGF0ZTogTG9jYWxEYXRlKTogU3RyaW5nID0KICAgIERhdGVUaW1lRm9ybWF0dGVyLm9mUGF0dGVybigiRUVFIiwgTG9jYWxlKCJwdCIsICJCUiIpKQogICAgICAgIC5mb3JtYXQoZGF0ZSkKICAgICAgICAucmVtb3ZlU3VmZml4KCIuIikKICAgICAgICAucmVwbGFjZUZpcnN0Q2hhciB7IGlmIChpdC5pc0xvd2VyQ2FzZSgpKSBpdC50aXRsZWNhc2UoTG9jYWxlKCJwdCIsICJCUiIpKSBlbHNlIGl0LnRvU3RyaW5nKCkgfQoK
         run: |
           python3 - <<'PY'
+          import base64, os
           from pathlib import Path
-
           path = Path('app/src/main/java/com/tempodroid/ui/TempodroidLightControlUi.kt')
           text = path.read_text()
           if 'private fun LightHourlyForecastStrip' in text:
               raise SystemExit(0)
-
-          text = text.replace(
-              'import androidx.compose.foundation.rememberScrollState\n',
-              'import androidx.compose.foundation.rememberScrollState\nimport androidx.compose.foundation.horizontalScroll\n',
-          )
-          text = text.replace(
-              'import com.tempodroid.weather.WeatherCodeMapper\n',
-              'import com.tempodroid.weather.DailyForecast\nimport com.tempodroid.weather.ForecastSnapshot\nimport com.tempodroid.weather.HourlyForecast\nimport com.tempodroid.weather.WeatherCodeMapper\n',
-          )
-          text = text.replace(
-              'import java.time.LocalTime\n',
-              'import java.time.LocalDate\nimport java.time.LocalTime\nimport java.time.ZoneId\n',
-          )
-          text = text.replace(
-              'fun TempodroidLightControlApp(\n    primaryState: SolarWeatherWidgetState,\n    primaryWidgetId: Int?,',
-              'fun TempodroidLightControlApp(\n    primaryState: SolarWeatherWidgetState,\n    primaryForecast: ForecastSnapshot,\n    primaryWidgetId: Int?,',
-          )
-          text = text.replace(
-              'LightDestination.HOME -> LightDashboardScreen(\n                            state = primaryState,\n                            primaryWidgetId = primaryWidgetId,',
-              'LightDestination.HOME -> LightDashboardScreen(\n                            state = primaryState,\n                            forecast = primaryForecast,\n                            primaryWidgetId = primaryWidgetId,',
-          )
-          text = text.replace(
-              'private fun LightDashboardScreen(\n    state: SolarWeatherWidgetState,\n    primaryWidgetId: Int?,',
-              'private fun LightDashboardScreen(\n    state: SolarWeatherWidgetState,\n    forecast: ForecastSnapshot,\n    primaryWidgetId: Int?,',
-          )
+          text = text.replace('import androidx.compose.foundation.rememberScrollState\n', 'import androidx.compose.foundation.rememberScrollState\nimport androidx.compose.foundation.horizontalScroll\n')
+          text = text.replace('import com.tempodroid.weather.WeatherCodeMapper\n', 'import com.tempodroid.weather.DailyForecast\nimport com.tempodroid.weather.ForecastSnapshot\nimport com.tempodroid.weather.HourlyForecast\nimport com.tempodroid.weather.WeatherCodeMapper\n')
+          text = text.replace('import java.time.LocalTime\n', 'import java.time.LocalDate\nimport java.time.LocalTime\nimport java.time.ZoneId\n')
+          text = text.replace('fun TempodroidLightControlApp(\n    primaryState: SolarWeatherWidgetState,\n    primaryWidgetId: Int?,', 'fun TempodroidLightControlApp(\n    primaryState: SolarWeatherWidgetState,\n    primaryForecast: ForecastSnapshot,\n    primaryWidgetId: Int?,')
+          text = text.replace('LightDestination.HOME -> LightDashboardScreen(\n                            state = primaryState,\n                            primaryWidgetId = primaryWidgetId,', 'LightDestination.HOME -> LightDashboardScreen(\n                            state = primaryState,\n                            forecast = primaryForecast,\n                            primaryWidgetId = primaryWidgetId,')
+          text = text.replace('private fun LightDashboardScreen(\n    state: SolarWeatherWidgetState,\n    primaryWidgetId: Int?,', 'private fun LightDashboardScreen(\n    state: SolarWeatherWidgetState,\n    forecast: ForecastSnapshot,\n    primaryWidgetId: Int?,')
           text = text.replace('        LightWeatherCard(state)\n', '        LightWeatherCard(state, forecast)\n')
-
           start = text.index('@Composable\nprivate fun LightWeatherCard')
           end = text.index('@Composable\nprivate fun LightSolarLunarCard', start)
-          replacement = r'''@Composable
-private fun LightWeatherCard(state: SolarWeatherWidgetState, forecast: ForecastSnapshot) {
-    val zone = runCatching { ZoneId.of(state.timezoneId) }.getOrDefault(ZoneId.systemDefault())
-    val now = Instant.now().atZone(zone)
-    val today = now.toLocalDate()
-    val hourly = forecast.hourly
-        .filter { item ->
-            val local = item.time.atZone(zone)
-            local.toLocalDate() == today && !item.time.isBefore(now.toInstant())
-        }
-    val nextDays = forecast.daily.filter { it.date.isAfter(today) }.take(5)
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(LightSurface, RoundedCornerShape(20.dp))
-            .border(1.dp, LightBorder, RoundedCornerShape(20.dp))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column {
-                Text("${state.temperature ?: "--"}°", fontSize = 38.sp, fontWeight = FontWeight.Bold, color = LightText)
-                Text(
-                    "Sensação ${state.apparentTemperature?.let { "$it°" } ?: "--"}",
-                    color = LightTextSecondary,
-                    fontSize = 13.sp,
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .background(LightActive, RoundedCornerShape(14.dp))
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                horizontalAlignment = Alignment.End,
-            ) {
-                Text(
-                    WeatherCodeMapper.labelPt(state.condition, state.isDay),
-                    color = LightAccentStrong,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.End,
-                )
-                Text(state.city, color = LightTextSecondary, fontSize = 12.sp)
-            }
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            LightDetailCell(Icons.Outlined.Air, "Vento", state.windSpeedKmh?.let { "$it km/h" } ?: "--", Modifier.weight(1f))
-            LightDetailCell(Icons.Outlined.Cloud, "Chuva", state.rainChance?.let { "$it%" } ?: "--", Modifier.weight(1f))
-        }
-
-        if (hourly.isNotEmpty()) {
-            LightHourlyForecastStrip(hourly, state, zone)
-        }
-        if (nextDays.isNotEmpty()) {
-            LightFiveDayForecast(nextDays)
-        }
-        if (hourly.isEmpty() && nextDays.isEmpty()) {
-            Text(
-                "A previsão detalhada aparecerá após a próxima atualização do clima.",
-                color = LightTextSecondary,
-                fontSize = 12.sp,
-            )
-        }
-    }
-}
-
-@Composable
-private fun LightDetailCell(icon: ImageVector, label: String, value: String, modifier: Modifier) {
-    Row(
-        modifier = modifier
-            .background(LightSurfaceAlt, RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, null, tint = LightAccent, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(9.dp))
-        Column {
-            Text(label, color = LightTextSecondary, fontSize = 11.sp)
-            Text(value, color = LightText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun LightHourlyForecastStrip(
-    hourly: List<HourlyForecast>,
-    state: SolarWeatherWidgetState,
-    zone: ZoneId,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Hoje · por hora", color = LightText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            hourly.forEach { item ->
-                val localTime = item.time.atZone(zone).toLocalTime()
-                val isDay = lightForecastIsDay(localTime, state)
-                Column(
-                    modifier = Modifier
-                        .width(66.dp)
-                        .background(LightSurfaceAlt, RoundedCornerShape(12.dp))
-                        .padding(vertical = 9.dp, horizontal = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    Text("${localTime.hour.toString().padStart(2, '0')}h", color = LightTextSecondary, fontSize = 11.sp)
-                    Text(lightWeatherGlyph(item.condition, isDay), fontSize = 20.sp)
-                    Text(item.temperature?.let { "$it°" } ?: "--", color = LightText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        item.rainChance?.let { "💧 $it%" } ?: "💧 --",
-                        color = LightAccentStrong,
-                        fontSize = 10.sp,
-                        maxLines = 1,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LightFiveDayForecast(days: List<DailyForecast>) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Próximos 5 dias", color = LightText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-        days.forEach { day ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(LightSurfaceAlt, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.width(74.dp)) {
-                    Text(lightForecastDayLabel(day.date), color = LightText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Text(day.date.format(DateTimeFormatter.ofPattern("dd/MM")), color = LightTextSecondary, fontSize = 10.sp)
-                }
-                Text(lightWeatherGlyph(day.condition, true), fontSize = 20.sp, modifier = Modifier.width(38.dp))
-                Text(
-                    "${day.low?.let { "$it°" } ?: "--"}  /  ${day.high?.let { "$it°" } ?: "--"}",
-                    color = LightText,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    day.rainChance?.let { "💧 $it%" } ?: "💧 --",
-                    color = LightAccentStrong,
-                    fontSize = 11.sp,
-                )
-            }
-        }
-    }
-}
-
-private fun lightForecastIsDay(time: LocalTime, state: SolarWeatherWidgetState): Boolean {
-    val sunrise = state.sunrise
-    val sunset = state.sunset
-    return if (sunrise != null && sunset != null) {
-        !time.isBefore(sunrise) && time.isBefore(sunset)
-    } else {
-        time.hour in 6..17
-    }
-}
-
-private fun lightWeatherGlyph(condition: WeatherCondition, isDay: Boolean): String = when (condition) {
-    WeatherCondition.CLEAR -> if (isDay) "☀️" else "🌙"
-    WeatherCondition.PARTLY_CLOUDY -> if (isDay) "🌤️" else "☁️"
-    WeatherCondition.CLOUDY -> "☁️"
-    WeatherCondition.RAIN -> "🌦️"
-    WeatherCondition.HEAVY_RAIN -> "🌧️"
-    WeatherCondition.SNOW -> "🌨️"
-    WeatherCondition.STORM -> "⛈️"
-    WeatherCondition.FOG -> "🌫️"
-}
-
-private fun lightForecastDayLabel(date: LocalDate): String =
-    DateTimeFormatter.ofPattern("EEE", Locale("pt", "BR"))
-        .format(date)
-        .removeSuffix(".")
-        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pt", "BR")) else it.toString() }
-
-'''
-          text = text[:start] + replacement + text[end:]
-          path.write_text(text)
+          replacement = base64.b64decode(os.environ['FORECAST_BLOCK_B64']).decode('utf-8')
+          path.write_text(text[:start] + replacement + text[end:])
           PY
-
       - name: Commit patched UI
         run: |
           if git diff --quiet; then exit 0; fi
