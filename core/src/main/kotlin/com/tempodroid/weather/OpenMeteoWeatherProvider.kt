@@ -20,9 +20,10 @@ class OpenMeteoWeatherProvider(
             "?latitude=$latitude" +
             "&longitude=$longitude" +
             "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,surface_pressure,weather_code,cloud_cover,precipitation,is_day" +
-            "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset" +
+            "&hourly=temperature_2m,precipitation_probability,weather_code" +
+            "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset" +
             "&timezone=auto" +
-            "&forecast_days=1"
+            "&forecast_days=6"
     }
 
     companion object {
