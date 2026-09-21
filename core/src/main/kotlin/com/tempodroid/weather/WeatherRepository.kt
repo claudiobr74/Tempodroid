@@ -22,6 +22,8 @@ data class WeatherData(
     val relativeHumidity: Int? = null,
     val windSpeedKmh: Int? = null,
     val surfacePressureHpa: Int? = null,
+    val hourlyForecast: List<HourlyForecast> = emptyList(),
+    val dailyForecast: List<DailyForecast> = emptyList(),
 )
 
 interface WeatherProvider {
