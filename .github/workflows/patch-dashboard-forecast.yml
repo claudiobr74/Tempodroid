@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   patch-ui:
-    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -185,7 +184,7 @@ private fun LightHourlyForecastStrip(
 private fun LightFiveDayForecast(days: List<DailyForecast>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Próximos 5 dias", color = LightText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-        days.forEachIndexed { index, day ->
+        days.forEach { day ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
