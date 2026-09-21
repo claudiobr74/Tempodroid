@@ -4,6 +4,7 @@ import android.content.Context
 import com.tempodroid.BuildConfig
 import com.tempodroid.astronomy.AstronomyCalculator
 import com.tempodroid.astronomy.AstronomyRepositoryImpl
+import com.tempodroid.data.ForecastCacheRepository
 import com.tempodroid.data.PreferencesRepository
 import com.tempodroid.data.WidgetCacheRepository
 import com.tempodroid.location.LocationRepository
@@ -20,6 +21,7 @@ class AppContainer(context: Context) {
     private val appContext = context.applicationContext
 
     val cache = WidgetCacheRepository(appContext)
+    val forecastCache = ForecastCacheRepository(appContext)
     val preferences = PreferencesRepository(appContext)
 
     private val okHttp = OkHttpClient.Builder()

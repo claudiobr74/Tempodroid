@@ -19,6 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
 import com.tempodroid.di.AppContainer
+import com.tempodroid.weather.ForecastSnapshot
 import com.tempodroid.widget.SolarWeatherWidgetReceiver
 import com.tempodroid.widget.SolarWeatherWidgetState
 import com.tempodroid.widget.WidgetUpdateCoordinator
@@ -49,6 +50,7 @@ class MainActivity : ComponentActivity() {
             var reloadKey by remember { mutableIntStateOf(0) }
             var installedWidgets by remember { mutableStateOf<List<InstalledWidgetUi>>(emptyList()) }
             var primaryState by remember { mutableStateOf(SolarWeatherWidgetState.Empty) }
+            var primaryForecast by remember { mutableStateOf(ForecastSnapshot.Empty) }
             var primaryWidgetId by remember { mutableStateOf<Int?>(null) }
             var networkLabel by remember { mutableStateOf(currentNetworkLabel()) }
             var connectionMessage by remember { mutableStateOf<String?>(null) }
@@ -74,11 +76,13 @@ class MainActivity : ComponentActivity() {
                 }
                 primaryWidgetId = selected?.appWidgetId
                 primaryState = selected?.state ?: container.cache.loadState()
+                primaryForecast = container.forecastCache.loadForecast(selected?.appWidgetId)
                 networkLabel = currentNetworkLabel()
             }
 
             TempodroidLightControlApp(
                 primaryState = primaryState,
+                primaryForecast = primaryForecast,
                 primaryWidgetId = primaryWidgetId,
                 installedWidgets = installedWidgets,
                 networkLabel = networkLabel,

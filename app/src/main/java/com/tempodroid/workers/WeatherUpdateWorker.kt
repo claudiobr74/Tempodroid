@@ -8,6 +8,7 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.tempodroid.di.AppContainer
+import com.tempodroid.weather.ForecastSnapshot
 import com.tempodroid.widget.SolarWeatherWidget
 import com.tempodroid.widget.WidgetUpdateCoordinator
 import java.time.Instant
@@ -77,6 +78,13 @@ class WeatherUpdateWorker(
                 // assim um null real da API não deixa sensação/chuva/etc. obsoletos no cache.
                 container.cache.clearWeather(appWidgetId)
                 container.cache.saveWeather(it, appWidgetId)
+                container.forecastCache.saveForecast(
+                    ForecastSnapshot(
+                        hourly = it.hourlyForecast,
+                        daily = it.dailyForecast,
+                    ),
+                    appWidgetId,
+                )
                 weatherSucceeded = true
             }.onFailure {
                 container.cache.markWeatherError(appWidgetId)

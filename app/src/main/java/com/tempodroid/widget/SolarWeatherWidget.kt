@@ -236,8 +236,11 @@ class SolarWeatherWidgetReceiver : GlanceAppWidgetReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val cache = AppContainer.get(context).cache
-                appWidgetIds.forEach { cache.deleteWidgetState(it) }
+                val container = AppContainer.get(context)
+                appWidgetIds.forEach { appWidgetId ->
+                    container.cache.deleteWidgetState(appWidgetId)
+                    container.forecastCache.deleteForecast(appWidgetId)
+                }
                 WidgetUpdateCoordinator.cancelIfNoWidgets(context)
             } finally {
                 pending.finish()

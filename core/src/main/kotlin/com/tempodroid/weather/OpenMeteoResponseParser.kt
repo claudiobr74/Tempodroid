@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlin.math.roundToInt
@@ -14,6 +15,7 @@ data class OpenMeteoResponse(
     val longitude: Double? = null,
     val timezone: String? = null,
     val current: Current? = null,
+    val hourly: Hourly? = null,
     val daily: Daily? = null,
 ) {
     @Serializable
@@ -31,7 +33,17 @@ data class OpenMeteoResponse(
     )
 
     @Serializable
+    data class Hourly(
+        val time: List<String?>? = null,
+        @SerialName("temperature_2m") val temperature: List<Double?>? = null,
+        @SerialName("precipitation_probability") val rainChance: List<Int?>? = null,
+        @SerialName("weather_code") val weatherCode: List<Int?>? = null,
+    )
+
+    @Serializable
     data class Daily(
+        val time: List<String?>? = null,
+        @SerialName("weather_code") val weatherCode: List<Int?>? = null,
         @SerialName("temperature_2m_max") val temperatureMax: List<Double?>? = null,
         @SerialName("temperature_2m_min") val temperatureMin: List<Double?>? = null,
         @SerialName("precipitation_probability_max") val rainChance: List<Int?>? = null,
@@ -77,7 +89,46 @@ object OpenMeteoResponseParser {
             relativeHumidity = current.relativeHumidity,
             windSpeedKmh = current.windSpeed?.roundToInt(),
             surfacePressureHpa = current.surfacePressure?.roundToInt(),
+            hourlyForecast = parseHourly(response.hourly, response.timezone),
+            dailyForecast = parseDaily(response.daily),
         )
+    }
+
+    private fun parseHourly(hourly: OpenMeteoResponse.Hourly?, timezoneId: String?): List<HourlyForecast> {
+        val times = hourly?.time.orEmpty()
+        val temperatures = hourly?.temperature.orEmpty()
+        val rainChances = hourly?.rainChance.orEmpty()
+        val weatherCodes = hourly?.weatherCode.orEmpty()
+        return times.mapIndexedNotNull { index, value ->
+            val instant = value?.let { parseInstant(it, timezoneId) } ?: return@mapIndexedNotNull null
+            val code = weatherCodes.getOrNull(index) ?: return@mapIndexedNotNull null
+            HourlyForecast(
+                time = instant,
+                temperature = temperatures.getOrNull(index)?.roundToInt(),
+                rainChance = rainChances.getOrNull(index),
+                condition = WeatherCodeMapper.fromOpenMeteo(code),
+            )
+        }
+    }
+
+    private fun parseDaily(daily: OpenMeteoResponse.Daily?): List<DailyForecast> {
+        val dates = daily?.time.orEmpty()
+        val temperaturesMax = daily?.temperatureMax.orEmpty()
+        val temperaturesMin = daily?.temperatureMin.orEmpty()
+        val rainChances = daily?.rainChance.orEmpty()
+        val weatherCodes = daily?.weatherCode.orEmpty()
+        return dates.mapIndexedNotNull { index, value ->
+            val date = value?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                ?: return@mapIndexedNotNull null
+            val code = weatherCodes.getOrNull(index) ?: return@mapIndexedNotNull null
+            DailyForecast(
+                date = date,
+                high = temperaturesMax.getOrNull(index)?.roundToInt(),
+                low = temperaturesMin.getOrNull(index)?.roundToInt(),
+                rainChance = rainChances.getOrNull(index),
+                condition = WeatherCodeMapper.fromOpenMeteo(code),
+            )
+        }
     }
 
     private fun parseInstant(value: String, timezoneId: String?): Instant? {

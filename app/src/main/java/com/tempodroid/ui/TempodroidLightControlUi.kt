@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -69,6 +70,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.tempodroid.BuildConfig
 import com.tempodroid.astronomy.MoonPhase
+import com.tempodroid.weather.DailyForecast
+import com.tempodroid.weather.ForecastSnapshot
+import com.tempodroid.weather.HourlyForecast
 import com.tempodroid.weather.WeatherCodeMapper
 import com.tempodroid.weather.WeatherCondition
 import com.tempodroid.widget.SolarWeatherWidgetState
@@ -78,7 +82,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -113,6 +119,7 @@ private enum class LightDestination { HOME, WIDGETS, SETTINGS, STATUS, PREVIEW }
 @Composable
 fun TempodroidLightControlApp(
     primaryState: SolarWeatherWidgetState,
+    primaryForecast: ForecastSnapshot,
     primaryWidgetId: Int?,
     installedWidgets: List<InstalledWidgetUi>,
     networkLabel: String,
@@ -143,6 +150,7 @@ fun TempodroidLightControlApp(
                     when (destination) {
                         LightDestination.HOME -> LightDashboardScreen(
                             state = primaryState,
+                            forecast = primaryForecast,
                             primaryWidgetId = primaryWidgetId,
                             widgets = installedWidgets,
                             onRefresh = onRefreshAll,
@@ -220,6 +228,7 @@ fun TempodroidLightControlApp(
 @Composable
 private fun LightDashboardScreen(
     state: SolarWeatherWidgetState,
+    forecast: ForecastSnapshot,
     primaryWidgetId: Int?,
     widgets: List<InstalledWidgetUi>,
     onRefresh: () -> Unit,
@@ -272,7 +281,7 @@ private fun LightDashboardScreen(
             )
         }
 
-        LightWeatherCard(state)
+        LightWeatherCard(state, forecast)
         LightSolarLunarCard(state)
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -303,7 +312,17 @@ private fun LightDashboardScreen(
 }
 
 @Composable
-private fun LightWeatherCard(state: SolarWeatherWidgetState) {
+private fun LightWeatherCard(state: SolarWeatherWidgetState, forecast: ForecastSnapshot) {
+    val zone = runCatching { ZoneId.of(state.timezoneId) }.getOrDefault(ZoneId.systemDefault())
+    val now = Instant.now().atZone(zone)
+    val today = now.toLocalDate()
+    val hourly = forecast.hourly
+        .filter { item ->
+            val local = item.time.atZone(zone)
+            local.toLocalDate() == today && !item.time.isBefore(now.toInstant())
+        }
+    val nextDays = forecast.daily.filter { it.date.isAfter(today) }.take(5)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -343,12 +362,22 @@ private fun LightWeatherCard(state: SolarWeatherWidgetState) {
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            LightDetailCell(Icons.Outlined.WaterDrop, "Umidade", state.relativeHumidity?.let { "$it%" } ?: "--", Modifier.weight(1f))
             LightDetailCell(Icons.Outlined.Air, "Vento", state.windSpeedKmh?.let { "$it km/h" } ?: "--", Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             LightDetailCell(Icons.Outlined.Cloud, "Chuva", state.rainChance?.let { "$it%" } ?: "--", Modifier.weight(1f))
-            LightDetailCell(Icons.Outlined.Speed, "Pressão", state.surfacePressureHpa?.let { "$it hPa" } ?: "--", Modifier.weight(1f))
+        }
+
+        if (hourly.isNotEmpty()) {
+            LightHourlyForecastStrip(hourly, state, zone)
+        }
+        if (nextDays.isNotEmpty()) {
+            LightFiveDayForecast(nextDays)
+        }
+        if (hourly.isEmpty() && nextDays.isEmpty()) {
+            Text(
+                "A previsão detalhada aparecerá após a próxima atualização do clima.",
+                color = LightTextSecondary,
+                fontSize = 12.sp,
+            )
         }
     }
 }
@@ -369,6 +398,105 @@ private fun LightDetailCell(icon: ImageVector, label: String, value: String, mod
         }
     }
 }
+
+@Composable
+private fun LightHourlyForecastStrip(
+    hourly: List<HourlyForecast>,
+    state: SolarWeatherWidgetState,
+    zone: ZoneId,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Hoje · por hora", color = LightText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            hourly.forEach { item ->
+                val localTime = item.time.atZone(zone).toLocalTime()
+                val isDay = lightForecastIsDay(localTime, state)
+                Column(
+                    modifier = Modifier
+                        .width(66.dp)
+                        .background(LightSurfaceAlt, RoundedCornerShape(12.dp))
+                        .padding(vertical = 9.dp, horizontal = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text("${localTime.hour.toString().padStart(2, '0')}h", color = LightTextSecondary, fontSize = 11.sp)
+                    Text(lightWeatherGlyph(item.condition, isDay), fontSize = 20.sp)
+                    Text(item.temperature?.let { "$it°" } ?: "--", color = LightText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        item.rainChance?.let { "💧 $it%" } ?: "💧 --",
+                        color = LightAccentStrong,
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LightFiveDayForecast(days: List<DailyForecast>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Próximos 5 dias", color = LightText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        days.forEach { day ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(LightSurfaceAlt, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.width(74.dp)) {
+                    Text(lightForecastDayLabel(day.date), color = LightText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(day.date.format(DateTimeFormatter.ofPattern("dd/MM")), color = LightTextSecondary, fontSize = 10.sp)
+                }
+                Text(lightWeatherGlyph(day.condition, true), fontSize = 20.sp, modifier = Modifier.width(38.dp))
+                Text(
+                    "${day.low?.let { "$it°" } ?: "--"}  /  ${day.high?.let { "$it°" } ?: "--"}",
+                    color = LightText,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    day.rainChance?.let { "💧 $it%" } ?: "💧 --",
+                    color = LightAccentStrong,
+                    fontSize = 11.sp,
+                )
+            }
+        }
+    }
+}
+
+private fun lightForecastIsDay(time: LocalTime, state: SolarWeatherWidgetState): Boolean {
+    val sunrise = state.sunrise
+    val sunset = state.sunset
+    return if (sunrise != null && sunset != null) {
+        !time.isBefore(sunrise) && time.isBefore(sunset)
+    } else {
+        time.hour in 6..17
+    }
+}
+
+private fun lightWeatherGlyph(condition: WeatherCondition, isDay: Boolean): String = when (condition) {
+    WeatherCondition.CLEAR -> if (isDay) "☀️" else "🌙"
+    WeatherCondition.PARTLY_CLOUDY -> if (isDay) "🌤️" else "☁️"
+    WeatherCondition.CLOUDY -> "☁️"
+    WeatherCondition.RAIN -> "🌦️"
+    WeatherCondition.HEAVY_RAIN -> "🌧️"
+    WeatherCondition.SNOW -> "🌨️"
+    WeatherCondition.STORM -> "⛈️"
+    WeatherCondition.FOG -> "🌫️"
+}
+
+private fun lightForecastDayLabel(date: LocalDate): String =
+    DateTimeFormatter.ofPattern("EEE", Locale("pt", "BR"))
+        .format(date)
+        .removeSuffix(".")
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pt", "BR")) else it.toString() }
 
 @Composable
 private fun LightSolarLunarCard(state: SolarWeatherWidgetState) {

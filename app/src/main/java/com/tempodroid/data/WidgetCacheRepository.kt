@@ -59,6 +59,8 @@ class WidgetCacheRepository(private val context: Context) {
         const val timezone = "timezone"
         const val source = "location_source"
         const val temperature = "temperature"
+        const val apparentTemperature = "apparent_temperature"
+        const val windSpeed = "wind_speed"
         const val condition = "condition"
         const val high = "high"
         const val low = "low"
@@ -133,6 +135,8 @@ class WidgetCacheRepository(private val context: Context) {
     suspend fun saveWeather(weather: WeatherData, appWidgetId: Int? = null) {
         context.dataStore.edit {
             weather.temperature?.let { value -> it[intKey(Names.temperature, appWidgetId)] = value }
+            weather.apparentTemperature?.let { value -> it[intKey(Names.apparentTemperature, appWidgetId)] = value }
+            weather.windSpeedKmh?.let { value -> it[intKey(Names.windSpeed, appWidgetId)] = value }
             it[stringKey(Names.condition, appWidgetId)] = weather.condition.name
             weather.high?.let { value -> it[intKey(Names.high, appWidgetId)] = value }
             weather.low?.let { value -> it[intKey(Names.low, appWidgetId)] = value }
@@ -150,6 +154,8 @@ class WidgetCacheRepository(private val context: Context) {
     suspend fun clearWeather(appWidgetId: Int) {
         context.dataStore.edit {
             it.remove(intKey(Names.temperature, appWidgetId))
+            it.remove(intKey(Names.apparentTemperature, appWidgetId))
+            it.remove(intKey(Names.windSpeed, appWidgetId))
             it.remove(stringKey(Names.condition, appWidgetId))
             it.remove(intKey(Names.high, appWidgetId))
             it.remove(intKey(Names.low, appWidgetId))
@@ -202,6 +208,8 @@ class WidgetCacheRepository(private val context: Context) {
             isDay = prefs[boolKey(Names.isDay, appWidgetId)] ?: true,
             timestamp = prefs[longKey(Names.weatherAt, appWidgetId)]?.let { Instant.ofEpochMilli(it) },
             timezoneId = prefs[stringKey(Names.timezone, appWidgetId)],
+            apparentTemperature = prefs[intKey(Names.apparentTemperature, appWidgetId)],
+            windSpeedKmh = prefs[intKey(Names.windSpeed, appWidgetId)],
         )
     }
 
@@ -261,6 +269,8 @@ class WidgetCacheRepository(private val context: Context) {
             it.remove(stringKey(Names.timezone, appWidgetId))
             it.remove(stringKey(Names.source, appWidgetId))
             it.remove(intKey(Names.temperature, appWidgetId))
+            it.remove(intKey(Names.apparentTemperature, appWidgetId))
+            it.remove(intKey(Names.windSpeed, appWidgetId))
             it.remove(stringKey(Names.condition, appWidgetId))
             it.remove(intKey(Names.high, appWidgetId))
             it.remove(intKey(Names.low, appWidgetId))

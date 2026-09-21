@@ -80,11 +80,16 @@ class WidgetCacheRepositoryTest {
                 isDay = true,
                 timestamp = Instant.parse("2026-09-17T18:00:00Z"),
                 timezoneId = "America/Sao_Paulo",
+                apparentTemperature = 34,
+                windSpeedKmh = 12,
             ),
             firstId,
         )
 
-        assertEquals(33, cache.loadState(firstId).temperature)
+        val firstState = cache.loadState(firstId)
+        assertEquals(33, firstState.temperature)
+        assertEquals(34, firstState.apparentTemperature)
+        assertEquals(12, firstState.windSpeedKmh)
         assertNull(cache.loadState(secondId).temperature)
     }
 
