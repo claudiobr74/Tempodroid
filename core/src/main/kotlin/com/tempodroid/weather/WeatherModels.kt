@@ -31,3 +31,12 @@ data class DailyForecast(
     val rainChance: Int?,
     val condition: WeatherCondition,
 )
+
+data class ForecastSnapshot(
+    val hourly: List<HourlyForecast> = emptyList(),
+    val daily: List<DailyForecast> = emptyList(),
+) {
+    companion object {
+        val Empty = ForecastSnapshot()
+    }
+}
