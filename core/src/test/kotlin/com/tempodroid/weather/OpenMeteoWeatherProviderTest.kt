@@ -59,7 +59,7 @@ class OpenMeteoWeatherProviderTest {
     }
 
     @Test
-    fun usesHourlyProbabilityForCurrentHourInsteadOfDailyMaximum() {
+    fun usesProbabilityForCurrentOngoingIntervalInsteadOfPreviousHourOrDailyMaximum() {
         val json = """
             {"timezone":"America/Sao_Paulo",
              "current":{"temperature_2m":23.0,"weather_code":2,"cloud_cover":55,"precipitation":0.0,"is_day":0,"time":"2026-09-23T22:22"},
@@ -69,8 +69,23 @@ class OpenMeteoWeatherProviderTest {
 
         val data = OpenMeteoResponseParser.parse(json)
 
-        assertEquals(27, data.rainChance)
+        // Open-Meteo: 23:00 representa a probabilidade do intervalo 22:00–23:00.
+        assertEquals(42, data.rainChance)
         assertEquals(81, data.dailyForecast.first().rainChance)
+    }
+
+    @Test
+    fun regressionAt1259Uses1300ProbabilityForThe1200To1300Interval() {
+        val json = """
+            {"timezone":"America/Sao_Paulo",
+             "current":{"temperature_2m":31.0,"weather_code":2,"cloud_cover":55,"precipitation":0.0,"is_day":1,"time":"2026-09-24T12:59"},
+             "hourly":{"time":["2026-09-24T12:00","2026-09-24T13:00","2026-09-24T14:00","2026-09-24T15:00"],"temperature_2m":[31.0,31.0,31.0,31.0],"precipitation_probability":[0,9,21,31],"weather_code":[2,2,2,61]},
+             "daily":{"time":["2026-09-24"],"weather_code":[61],"temperature_2m_max":[34.0],"temperature_2m_min":[21.0],"precipitation_probability_max":[40]}}
+        """.trimIndent()
+
+        val data = OpenMeteoResponseParser.parse(json)
+
+        assertEquals(9, data.rainChance)
     }
 
     @Test

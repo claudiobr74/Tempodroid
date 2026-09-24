@@ -77,7 +77,7 @@ object OpenMeteoResponseParser {
         }
         val timestamp = current.time?.let { parseInstant(it, response.timezone) }
         val hourlyForecast = parseHourly(response.hourly, response.timezone)
-        val currentRainChance = rainChanceForCurrentHour(
+        val currentRainChance = rainChanceForCurrentInterval(
             timestamp = timestamp,
             timezoneId = response.timezone,
             hourlyForecast = hourlyForecast,
@@ -103,7 +103,12 @@ object OpenMeteoResponseParser {
         )
     }
 
-    private fun rainChanceForCurrentHour(
+    /**
+     * Open-Meteo rotula precipitation_probability pelo FIM do intervalo:
+     * por exemplo, 13:00 representa a probabilidade do período 12:00–13:00.
+     * Portanto, durante 12:xx devemos usar o valor de 13:00, não o de 12:00.
+     */
+    private fun rainChanceForCurrentInterval(
         timestamp: Instant?,
         timezoneId: String?,
         hourlyForecast: List<HourlyForecast>,
@@ -115,14 +120,18 @@ object OpenMeteoResponseParser {
         val zone = timezoneId
             ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
             ?: ZoneId.of("UTC")
-        val targetHour = timestamp.atZone(zone).truncatedTo(ChronoUnit.HOURS)
+        val intervalEnd = timestamp
+            .atZone(zone)
+            .truncatedTo(ChronoUnit.HOURS)
+            .plusHours(1)
 
         candidates.firstOrNull { item ->
-            item.time.atZone(zone).truncatedTo(ChronoUnit.HOURS) == targetHour
+            item.time.atZone(zone).truncatedTo(ChronoUnit.HOURS) == intervalEnd
         }?.let { return it.rainChance }
 
+        val target = intervalEnd.toInstant()
         return candidates.minByOrNull { item ->
-            abs(Duration.between(timestamp, item.time).toMinutes())
+            abs(Duration.between(target, item.time).toMinutes())
         }?.rainChance
     }
 
