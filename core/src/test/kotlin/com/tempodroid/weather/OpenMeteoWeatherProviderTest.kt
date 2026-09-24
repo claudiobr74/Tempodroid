@@ -38,7 +38,7 @@ class OpenMeteoWeatherProviderTest {
         val data = provider.fetchWeather(0.0, 0.0)
         assertEquals(28, data.high)
         assertEquals(WeatherCondition.RAIN, data.condition)
-        assertEquals(85, data.rainChance)
+        assertEquals(70, data.rainChance)
         assertEquals(29, data.apparentTemperature)
         assertEquals(11, data.windSpeedKmh)
         assertEquals("America/Sao_Paulo", data.timezoneId)
@@ -56,6 +56,34 @@ class OpenMeteoWeatherProviderTest {
         assertEquals(21, data.dailyForecast[1].low)
         assertEquals(40, data.dailyForecast[1].rainChance)
         assertEquals(WeatherCondition.CLOUDY, data.dailyForecast[1].condition)
+    }
+
+    @Test
+    fun usesHourlyProbabilityForCurrentHourInsteadOfDailyMaximum() {
+        val json = """
+            {"timezone":"America/Sao_Paulo",
+             "current":{"temperature_2m":23.0,"weather_code":2,"cloud_cover":55,"precipitation":0.0,"is_day":0,"time":"2026-09-23T22:22"},
+             "hourly":{"time":["2026-09-23T21:00","2026-09-23T22:00","2026-09-23T23:00"],"temperature_2m":[24.0,23.0,22.0],"precipitation_probability":[18,27,42],"weather_code":[2,2,61]},
+             "daily":{"time":["2026-09-23"],"weather_code":[61],"temperature_2m_max":[30.0],"temperature_2m_min":[20.0],"precipitation_probability_max":[81]}}
+        """.trimIndent()
+
+        val data = OpenMeteoResponseParser.parse(json)
+
+        assertEquals(27, data.rainChance)
+        assertEquals(81, data.dailyForecast.first().rainChance)
+    }
+
+    @Test
+    fun fallsBackToDailyMaximumWhenHourlyProbabilityIsUnavailable() {
+        val json = """
+            {"timezone":"America/Sao_Paulo",
+             "current":{"temperature_2m":23.0,"weather_code":2,"is_day":0,"time":"2026-09-23T22:22"},
+             "daily":{"time":["2026-09-23"],"weather_code":[61],"temperature_2m_max":[30.0],"temperature_2m_min":[20.0],"precipitation_probability_max":[81]}}
+        """.trimIndent()
+
+        val data = OpenMeteoResponseParser.parse(json)
+
+        assertEquals(81, data.rainChance)
     }
 
     @Test
