@@ -6,7 +6,7 @@ on:
       version_code:
         description: "Android versionCode"
         required: true
-        default: "15"
+        default: "16"
       version_name:
         description: "Versão pública (ex.: 1.0.0)"
         required: true
