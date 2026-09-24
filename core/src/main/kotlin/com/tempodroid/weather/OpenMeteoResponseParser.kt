@@ -3,10 +3,13 @@ package com.tempodroid.weather
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Serializable
@@ -73,12 +76,18 @@ object OpenMeteoResponseParser {
             "Open-Meteo retornou is_day inválido: $isDayRaw"
         }
         val timestamp = current.time?.let { parseInstant(it, response.timezone) }
+        val hourlyForecast = parseHourly(response.hourly, response.timezone)
+        val currentRainChance = rainChanceForCurrentHour(
+            timestamp = timestamp,
+            timezoneId = response.timezone,
+            hourlyForecast = hourlyForecast,
+        )
         return WeatherData(
             temperature = current.temperature?.roundToInt(),
             condition = WeatherCodeMapper.fromOpenMeteo(code),
             high = response.daily?.temperatureMax?.firstOrNull()?.roundToInt(),
             low = response.daily?.temperatureMin?.firstOrNull()?.roundToInt(),
-            rainChance = response.daily?.rainChance?.firstOrNull(),
+            rainChance = currentRainChance ?: response.daily?.rainChance?.firstOrNull(),
             cloudCover = current.cloudCover,
             precipitation = current.precipitation,
             weatherCode = code,
@@ -89,9 +98,32 @@ object OpenMeteoResponseParser {
             relativeHumidity = current.relativeHumidity,
             windSpeedKmh = current.windSpeed?.roundToInt(),
             surfacePressureHpa = current.surfacePressure?.roundToInt(),
-            hourlyForecast = parseHourly(response.hourly, response.timezone),
+            hourlyForecast = hourlyForecast,
             dailyForecast = parseDaily(response.daily),
         )
+    }
+
+    private fun rainChanceForCurrentHour(
+        timestamp: Instant?,
+        timezoneId: String?,
+        hourlyForecast: List<HourlyForecast>,
+    ): Int? {
+        val candidates = hourlyForecast.filter { it.rainChance != null }
+        if (candidates.isEmpty()) return null
+        if (timestamp == null) return candidates.first().rainChance
+
+        val zone = timezoneId
+            ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
+            ?: ZoneId.of("UTC")
+        val targetHour = timestamp.atZone(zone).truncatedTo(ChronoUnit.HOURS)
+
+        candidates.firstOrNull { item ->
+            item.time.atZone(zone).truncatedTo(ChronoUnit.HOURS) == targetHour
+        }?.let { return it.rainChance }
+
+        return candidates.minByOrNull { item ->
+            abs(Duration.between(timestamp, item.time).toMinutes())
+        }?.rainChance
     }
 
     private fun parseHourly(hourly: OpenMeteoResponse.Hourly?, timezoneId: String?): List<HourlyForecast> {
