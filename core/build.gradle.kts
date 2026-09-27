@@ -10,6 +10,7 @@ kotlin {
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.commons.suncalc)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }
