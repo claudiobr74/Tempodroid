@@ -125,8 +125,6 @@ class AstronomyCalculatorTest {
             goianiaLat,
             goianiaLon,
             zdt,
-            events.rise,
-            events.set,
         )
         val expectedProjection = CelestialPositionCalculator.fromHorizontalCoordinates(
             altitudeDegrees = horizontal.altitude,
