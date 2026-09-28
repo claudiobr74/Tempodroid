@@ -82,8 +82,6 @@ class AstronomyCalculator {
             latitude = latitude,
             longitude = longitude,
             dateTime = now,
-            moonrise = moonEvents.rise,
-            moonset = moonEvents.set,
         )
         return AstronomyData(
             sunrise = solar.sunrise,
@@ -184,13 +182,10 @@ class AstronomyCalculator {
      * A posição visual da Lua sempre parte da altitude e azimute topocêntricos
      * reais. Nascer/ocaso não dirigem mais a curva visual.
      */
-    @Suppress("UNUSED_PARAMETER")
     fun moonPosition(
         latitude: Double,
         longitude: Double,
         dateTime: ZonedDateTime,
-        moonrise: LocalTime?,
-        moonset: LocalTime?,
     ): CelestialPosition {
         val horiz = moonHorizontal(latitude, longitude, julianDate(dateTime))
         return CelestialPositionCalculator.fromHorizontalCoordinates(
