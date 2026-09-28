@@ -1,7 +1,16 @@
 package com.tempodroid.astronomy
 
-import org.shredzone.commons.suncalc.MoonPosition
-import org.shredzone.commons.suncalc.MoonTimes
+import io.github.cosinekitty.astronomy.Aberration
+import io.github.cosinekitty.astronomy.Body
+import io.github.cosinekitty.astronomy.Direction
+import io.github.cosinekitty.astronomy.EquatorEpoch
+import io.github.cosinekitty.astronomy.Observer
+import io.github.cosinekitty.astronomy.Refraction
+import io.github.cosinekitty.astronomy.Time as AstronomyTime
+import io.github.cosinekitty.astronomy.equator
+import io.github.cosinekitty.astronomy.horizon
+import io.github.cosinekitty.astronomy.searchRiseSet
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -13,7 +22,6 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.pow
-import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.tan
 
@@ -21,8 +29,8 @@ import kotlin.math.tan
  * Cálculo local de Sol e Lua.
  *
  * Sol: algoritmo NOAA Solar Calculator.
- * Lua: posição e nascer/ocaso topocêntricos via commons-suncalc 3.x,
- * biblioteca Apache-2.0 compatível com Android API 26+.
+ * Lua: Astronomy Engine 2.1.19, com efeméride lunar de alta precisão,
+ * coordenadas topocêntricas, paralaxe, precessão/nutação e refração.
  */
 class AstronomyCalculator {
 
@@ -137,8 +145,9 @@ class AstronomyCalculator {
     data class MoonEvents(val rise: LocalTime?, val set: LocalTime?)
 
     /**
-     * Nascer e ocaso lunares topocêntricos. Diferente da implementação antiga,
-     * não estima os eventos por apenas 48 amostras da posição simplificada.
+     * Nascer e ocaso lunares calculados para o dia civil local. O Astronomy
+     * Engine considera tamanho aparente do disco, paralaxe topocêntrica e
+     * refração atmosférica padrão.
      */
     fun moonRiseSet(
         latitude: Double,
@@ -146,29 +155,34 @@ class AstronomyCalculator {
         date: LocalDate,
         timezone: ZoneId,
     ): MoonEvents {
-        val times = MoonTimes.compute()
-            .on(date.atStartOfDay(timezone))
-            .at(latitude, longitude)
-            .execute()
+        val observer = Observer(latitude, longitude, 0.0)
+        val startInstant = date.atStartOfDay(timezone).toInstant()
+        val endInstant = date.plusDays(1).atStartOfDay(timezone).toInstant()
+        val limitDays = Duration.between(startInstant, endInstant).toMillis() / 86_400_000.0
+        val start = astronomyTime(startInstant)
+
+        fun event(direction: Direction): LocalTime? {
+            val found = searchRiseSet(
+                Body.Moon,
+                observer,
+                direction,
+                start,
+                limitDays,
+            ) ?: return null
+            val local = Instant.ofEpochMilli(found.toMillisecondsSince1970()).atZone(timezone)
+            if (local.toLocalDate() != date) return null
+            return local.toLocalTime().withSecond(0).withNano(0)
+        }
 
         return MoonEvents(
-            rise = times.rise
-                ?.withZoneSameInstant(timezone)
-                ?.toLocalTime()
-                ?.withSecond(0)
-                ?.withNano(0),
-            set = times.set
-                ?.withZoneSameInstant(timezone)
-                ?.toLocalTime()
-                ?.withSecond(0)
-                ?.withNano(0),
+            rise = event(Direction.Rise),
+            set = event(Direction.Set),
         )
     }
 
     /**
-     * A posição visual da Lua sempre parte da altitude e do azimute reais.
-     * moonrise/moonset permanecem nos parâmetros apenas por compatibilidade
-     * binária/fonte com chamadas anteriores; não dirigem mais a trajetória.
+     * A posição visual da Lua sempre parte da altitude e azimute topocêntricos
+     * reais. Nascer/ocaso não dirigem mais a curva visual.
      */
     @Suppress("UNUSED_PARAMETER")
     fun moonPosition(
@@ -189,26 +203,38 @@ class AstronomyCalculator {
     data class Horizontal(val altitude: Double, val azimuth: Double)
 
     /**
-     * Posição lunar topocêntrica/aparente. getAltitude() já considera a
-     * refração próxima ao horizonte; o azimute é medido a partir do norte.
+     * Posição aparente da Lua para o observador: efeméride lunar + paralaxe
+     * topocêntrica + equador verdadeiro da data + aberração + refração normal.
      */
     fun moonHorizontal(latitude: Double, longitude: Double, jd: Double): Horizontal {
         val instant = julianToInstant(jd)
-        val position = MoonPosition.compute()
-            .on(instant)
-            .at(latitude, longitude)
-            .execute()
+        val time = astronomyTime(instant)
+        val observer = Observer(latitude, longitude, 0.0)
+        val equatorial = equator(
+            Body.Moon,
+            time,
+            observer,
+            EquatorEpoch.OfDate,
+            Aberration.Corrected,
+        )
+        val horizontal = horizon(
+            time,
+            observer,
+            equatorial.ra,
+            equatorial.dec,
+            Refraction.Normal,
+        )
         return Horizontal(
-            altitude = position.altitude,
-            azimuth = position.azimuth.normalizeDegrees(),
+            altitude = horizontal.altitude,
+            azimuth = horizontal.azimuth.normalizeDegrees(),
         )
     }
 
     data class Equatorial(val ra: Double, val dec: Double)
 
     /**
-     * Modelo lunar simplificado legado, mantido para compatibilidade de API e
-     * testes históricos. A trajetória do widget não usa mais este resultado.
+     * Modelo lunar simplificado legado, mantido apenas para compatibilidade de
+     * API/testes históricos. A trajetória do widget não usa este resultado.
      */
     fun moonEquatorial(jd: Double): Equatorial {
         val t = (jd - 2451545.0) / 36525.0
@@ -277,6 +303,18 @@ class AstronomyCalculator {
         val epochDay = jd - 2440587.5
         val millis = (epochDay * 86_400_000.0).toLong()
         return Instant.ofEpochMilli(millis)
+    }
+
+    private fun astronomyTime(instant: Instant): AstronomyTime {
+        val utc = instant.atZone(ZoneId.of("UTC"))
+        return AstronomyTime(
+            utc.year,
+            utc.monthValue,
+            utc.dayOfMonth,
+            utc.hour,
+            utc.minute,
+            utc.second + utc.nano / 1_000_000_000.0,
+        )
     }
 
     private fun LocalDate.toJulianDay(): Double {
