@@ -1,5 +1,7 @@
 package com.tempodroid.astronomy
 
+import org.shredzone.commons.suncalc.MoonPosition
+import org.shredzone.commons.suncalc.MoonTimes
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -18,11 +20,9 @@ import kotlin.math.tan
 /**
  * Cálculo local de Sol e Lua.
  *
- * Sol: algoritmo NOAA Solar Calculator (equação do tempo + declinação).
- * Lua: posição simplificada de Meeus (cap. 47, termos principais) e
- * moonrise/moonset por amostragem de altitude ao longo do dia.
- *
- * Nenhuma biblioteca externa. Licença do código: do próprio app.
+ * Sol: algoritmo NOAA Solar Calculator.
+ * Lua: posição e nascer/ocaso topocêntricos via commons-suncalc 3.x,
+ * biblioteca Apache-2.0 compatível com Android API 26+.
  */
 class AstronomyCalculator {
 
@@ -116,8 +116,6 @@ class AstronomyCalculator {
         val cosHa = (sin((-0.833).toRadians()) - sin(latRad) * sinDec) / (cos(latRad) * cos(dec))
         val solarNoon = julianToLocalTime(jTransit, timezone)
 
-        // cosHa >= 1: Sol não nasce nesta data/local (noite polar).
-        // cosHa <= -1: Sol não se põe nesta data/local (dia polar).
         if (cosHa >= 1.0 || cosHa <= -1.0) {
             return SolarTimes(
                 sunrise = null,
@@ -138,39 +136,41 @@ class AstronomyCalculator {
 
     data class MoonEvents(val rise: LocalTime?, val set: LocalTime?)
 
+    /**
+     * Nascer e ocaso lunares topocêntricos. Diferente da implementação antiga,
+     * não estima os eventos por apenas 48 amostras da posição simplificada.
+     */
     fun moonRiseSet(
         latitude: Double,
         longitude: Double,
         date: LocalDate,
         timezone: ZoneId,
     ): MoonEvents {
-        val samples = 48
-        val altitudes = Array(samples + 1) { i ->
-            val minutes = (i * (24 * 60) / samples)
-            val time = LocalTime.of(minutes / 60 % 24, minutes % 60)
-            val zdt = ZonedDateTime.of(date, time, timezone)
-            moonHorizontal(latitude, longitude, julianDate(zdt)).altitude
-        }
-        var riseMinutes: Int? = null
-        var setMinutes: Int? = null
-        for (i in 0 until samples) {
-            val a0 = altitudes[i]
-            val a1 = altitudes[i + 1]
-            if (a0 < 0 && a1 >= 0 && riseMinutes == null) {
-                val t = a0 / (a0 - a1)
-                riseMinutes = ((i + t) * (24 * 60) / samples).roundToInt().coerceIn(0, 24 * 60 - 1)
-            }
-            if (a0 >= 0 && a1 < 0 && setMinutes == null) {
-                val t = a0 / (a0 - a1)
-                setMinutes = ((i + t) * (24 * 60) / samples).roundToInt().coerceIn(0, 24 * 60 - 1)
-            }
-        }
+        val times = MoonTimes.compute()
+            .on(date.atStartOfDay(timezone))
+            .at(latitude, longitude)
+            .execute()
+
         return MoonEvents(
-            rise = riseMinutes?.let { minutesToLocalTime(it) },
-            set = setMinutes?.let { minutesToLocalTime(it) },
+            rise = times.rise
+                ?.withZoneSameInstant(timezone)
+                ?.toLocalTime()
+                ?.withSecond(0)
+                ?.withNano(0),
+            set = times.set
+                ?.withZoneSameInstant(timezone)
+                ?.toLocalTime()
+                ?.withSecond(0)
+                ?.withNano(0),
         )
     }
 
+    /**
+     * A posição visual da Lua sempre parte da altitude e do azimute reais.
+     * moonrise/moonset permanecem nos parâmetros apenas por compatibilidade
+     * binária/fonte com chamadas anteriores; não dirigem mais a trajetória.
+     */
+    @Suppress("UNUSED_PARAMETER")
     fun moonPosition(
         latitude: Double,
         longitude: Double,
@@ -179,51 +179,36 @@ class AstronomyCalculator {
         moonset: LocalTime?,
     ): CelestialPosition {
         val horiz = moonHorizontal(latitude, longitude, julianDate(dateTime))
-        val above = horiz.altitude > 0.0
-        if (moonrise != null && moonset != null) {
-            val approx = CelestialPositionCalculator.alongArc(
-                now = dateTime.toLocalTime(),
-                rise = moonrise,
-                set = moonset,
-            )
-            return approx.copy(
-                aboveHorizon = above,
-                altitudeDegrees = horiz.altitude,
-                azimuthDegrees = horiz.azimuth,
-            )
-        }
-        val x = ((horiz.azimuth + 90.0) / 180.0).toFloat().coerceIn(0f, 1f)
-        val y = (1.0 - (horiz.altitude / 90.0).coerceIn(0.0, 1.0)).toFloat()
-        return CelestialPosition(
-            normalizedX = x,
-            normalizedY = y,
-            aboveHorizon = above,
+        return CelestialPositionCalculator.fromHorizontalCoordinates(
             altitudeDegrees = horiz.altitude,
             azimuthDegrees = horiz.azimuth,
+            aboveHorizon = horiz.altitude > 0.0,
         )
     }
 
     data class Horizontal(val altitude: Double, val azimuth: Double)
 
+    /**
+     * Posição lunar topocêntrica/aparente. getAltitude() já considera a
+     * refração próxima ao horizonte; o azimute é medido a partir do norte.
+     */
     fun moonHorizontal(latitude: Double, longitude: Double, jd: Double): Horizontal {
-        val equatorial = moonEquatorial(jd)
-        val gst = greenwichSiderealTime(jd)
-        val lst = (gst + longitude).normalizeDegrees()
-        val ha = (lst - equatorial.ra).normalizeDegrees().toRadians()
-        val dec = equatorial.dec.toRadians()
-        val lat = latitude.toRadians()
-        val sinAlt = sin(lat) * sin(dec) + cos(lat) * cos(dec) * cos(ha)
-        val alt = asin(sinAlt.coerceIn(-1.0, 1.0)).toDegrees()
-        val y = -cos(dec) * sin(ha)
-        val x = sin(dec) * cos(lat) - cos(dec) * sin(lat) * cos(ha)
-        val az = atan2(y, x).toDegrees().normalizeDegrees()
-        return Horizontal(altitude = alt, azimuth = az)
+        val instant = julianToInstant(jd)
+        val position = MoonPosition.compute()
+            .on(instant)
+            .at(latitude, longitude)
+            .execute()
+        return Horizontal(
+            altitude = position.altitude,
+            azimuth = position.azimuth.normalizeDegrees(),
+        )
     }
 
     data class Equatorial(val ra: Double, val dec: Double)
 
     /**
-     * Longitude/latitude eclíptica lunar (termos principais de Meeus) → equatorial.
+     * Modelo lunar simplificado legado, mantido para compatibilidade de API e
+     * testes históricos. A trajetória do widget não usa mais este resultado.
      */
     fun moonEquatorial(jd: Double): Equatorial {
         val t = (jd - 2451545.0) / 36525.0
@@ -285,16 +270,13 @@ class AstronomyCalculator {
         return gmst.normalizeDegrees()
     }
 
-    private fun julianToLocalTime(jd: Double, zone: ZoneId): LocalTime {
-        val epochDay = jd - 2440587.5
-        val millis = (epochDay * 86400000.0).toLong()
-        val instant = Instant.ofEpochMilli(millis)
-        return instant.atZone(zone).toLocalTime().withSecond(0).withNano(0)
-    }
+    private fun julianToLocalTime(jd: Double, zone: ZoneId): LocalTime =
+        julianToInstant(jd).atZone(zone).toLocalTime().withSecond(0).withNano(0)
 
-    private fun minutesToLocalTime(total: Int): LocalTime {
-        val clamped = total.coerceIn(0, 24 * 60 - 1)
-        return LocalTime.of(clamped / 60, clamped % 60)
+    private fun julianToInstant(jd: Double): Instant {
+        val epochDay = jd - 2440587.5
+        val millis = (epochDay * 86_400_000.0).toLong()
+        return Instant.ofEpochMilli(millis)
     }
 
     private fun LocalDate.toJulianDay(): Double {
