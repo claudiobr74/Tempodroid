@@ -122,11 +122,11 @@ class AstronomyCalculatorTest {
         val events = calculator.moonRiseSet(goianiaLat, goianiaLon, targetDate, zone)
         val horizontal = calculator.moonHorizontal(goianiaLat, goianiaLon, calculator.julianDate(zdt))
         val position = calculator.moonPosition(
-            latitude = goianiaLat,
-            longitude = goianiaLon,
-            dateTime = zdt,
-            moonrise = events.rise,
-            moonset = events.set,
+            goianiaLat,
+            goianiaLon,
+            zdt,
+            events.rise,
+            events.set,
         )
         val expectedProjection = CelestialPositionCalculator.fromHorizontalCoordinates(
             altitudeDegrees = horizontal.altitude,
@@ -135,12 +135,11 @@ class AstronomyCalculatorTest {
         )
 
         assertTrue("moonrise=${events.rise}", requireNotNull(events.rise).hour == 19)
-        assertTrue("altitude=${horizontal.altitude}", horizontal.altitude > 20.0)
-        assertTrue("altitude=${horizontal.altitude}", horizontal.altitude < 40.0)
-        assertTrue("azimuth=${horizontal.azimuth}", horizontal.azimuth in 60.0..100.0)
+        assertTrue("altitude=${horizontal.altitude}", horizontal.altitude in 28.0..34.0)
+        assertTrue("azimuth=${horizontal.azimuth}", horizontal.azimuth in 60.0..90.0)
         assertEquals(expectedProjection.normalizedX, position.normalizedX, 0.0001f)
         assertEquals(expectedProjection.normalizedY, position.normalizedY, 0.0001f)
-        assertTrue("normalizedY=${position.normalizedY}", position.normalizedY < 0.62f)
+        assertTrue("normalizedY=${position.normalizedY}", position.normalizedY < 0.56f)
     }
 
     @Test
