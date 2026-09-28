@@ -10,6 +10,7 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 
 class AstronomyCalculatorTest {
 
@@ -111,6 +112,35 @@ class AstronomyCalculatorTest {
         )
         assertFalse(hidden.aboveHorizon)
         assertTrue(hidden.normalizedY > 1f)
+    }
+
+    @Test
+    fun september27MoonTrajectoryUsesTopocentricAltitudeInsteadOfSyntheticArc() {
+        val targetDate = LocalDate.of(2026, 9, 27)
+        val targetTime = LocalTime.of(20, 31)
+        val zdt = ZonedDateTime.of(targetDate, targetTime, zone)
+        val events = calculator.moonRiseSet(goianiaLat, goianiaLon, targetDate, zone)
+        val horizontal = calculator.moonHorizontal(goianiaLat, goianiaLon, calculator.julianDate(zdt))
+        val position = calculator.moonPosition(
+            latitude = goianiaLat,
+            longitude = goianiaLon,
+            dateTime = zdt,
+            moonrise = events.rise,
+            moonset = events.set,
+        )
+        val expectedProjection = CelestialPositionCalculator.fromHorizontalCoordinates(
+            altitudeDegrees = horizontal.altitude,
+            azimuthDegrees = horizontal.azimuth,
+            aboveHorizon = horizontal.altitude > 0.0,
+        )
+
+        assertTrue("moonrise=${events.rise}", requireNotNull(events.rise).hour == 19)
+        assertTrue("altitude=${horizontal.altitude}", horizontal.altitude > 20.0)
+        assertTrue("altitude=${horizontal.altitude}", horizontal.altitude < 40.0)
+        assertTrue("azimuth=${horizontal.azimuth}", horizontal.azimuth in 60.0..100.0)
+        assertEquals(expectedProjection.normalizedX, position.normalizedX, 0.0001f)
+        assertEquals(expectedProjection.normalizedY, position.normalizedY, 0.0001f)
+        assertTrue("normalizedY=${position.normalizedY}", position.normalizedY < 0.62f)
     }
 
     @Test
