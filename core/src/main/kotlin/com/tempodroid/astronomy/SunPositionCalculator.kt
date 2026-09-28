@@ -58,13 +58,20 @@ object SunPositionCalculator {
 }
 
 object CelestialPositionCalculator {
+    // O widget reserva a faixa inferior para a timeline. A projeção do céu usa
+    // um horizonte visual acima dessa faixa para que a altitude astronômica
+    // seja percebida corretamente sem fazer a Lua parecer colada ao rodapé.
+    private const val SKY_HORIZON_Y = 0.74
+    private const val SKY_ZENITH_Y = 0.14
+    private const val ALTITUDE_CURVE_EXPONENT = 0.72
+
     /**
      * Projeta altitude/azimute reais para o céu 2D do widget.
      *
      * Leste aparece à esquerda, oeste à direita e o zênite converge para o
      * centro. Essa convergência evita saltos quando o azimute muda rapidamente
-     * perto do zênite. O eixo vertical usa a altitude astronômica real com uma
-     * curva perceptual suave para preservar profundidade junto ao horizonte.
+     * perto do zênite. O eixo vertical usa a altitude astronômica real e a
+     * comprime para a área visual de céu que permanece livre acima da timeline.
      */
     fun fromHorizontalCoordinates(
         altitudeDegrees: Double,
@@ -83,8 +90,12 @@ object CelestialPositionCalculator {
         }
 
         val altitude = altitudeDegrees.coerceIn(0.0, 90.0)
-        val altitudeFactor = sin(altitude.toRadians()).coerceIn(0.0, 1.0).pow(0.85)
-        val y = (0.90 - altitudeFactor * 0.72).toFloat().coerceIn(0.16f, 0.92f)
+        val altitudeFactor = sin(altitude.toRadians())
+            .coerceIn(0.0, 1.0)
+            .pow(ALTITUDE_CURVE_EXPONENT)
+        val y = (
+            SKY_HORIZON_Y - altitudeFactor * (SKY_HORIZON_Y - SKY_ZENITH_Y)
+        ).toFloat().coerceIn(SKY_ZENITH_Y.toFloat(), SKY_HORIZON_Y.toFloat())
 
         return CelestialPosition(
             normalizedX = horizontalX(azimuth, altitude),

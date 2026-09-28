@@ -74,8 +74,6 @@ class AstronomyCalculator {
             latitude = latitude,
             longitude = longitude,
             dateTime = now,
-            moonrise = moonEvents.rise,
-            moonset = moonEvents.set,
         )
         return AstronomyData(
             sunrise = solar.sunrise,
@@ -175,31 +173,12 @@ class AstronomyCalculator {
         latitude: Double,
         longitude: Double,
         dateTime: ZonedDateTime,
-        moonrise: LocalTime?,
-        moonset: LocalTime?,
     ): CelestialPosition {
         val horiz = moonHorizontal(latitude, longitude, julianDate(dateTime))
-        val above = horiz.altitude > 0.0
-        if (moonrise != null && moonset != null) {
-            val approx = CelestialPositionCalculator.alongArc(
-                now = dateTime.toLocalTime(),
-                rise = moonrise,
-                set = moonset,
-            )
-            return approx.copy(
-                aboveHorizon = above,
-                altitudeDegrees = horiz.altitude,
-                azimuthDegrees = horiz.azimuth,
-            )
-        }
-        val x = ((horiz.azimuth + 90.0) / 180.0).toFloat().coerceIn(0f, 1f)
-        val y = (1.0 - (horiz.altitude / 90.0).coerceIn(0.0, 1.0)).toFloat()
-        return CelestialPosition(
-            normalizedX = x,
-            normalizedY = y,
-            aboveHorizon = above,
+        return CelestialPositionCalculator.fromHorizontalCoordinates(
             altitudeDegrees = horiz.altitude,
             azimuthDegrees = horiz.azimuth,
+            aboveHorizon = horiz.altitude > 0.0,
         )
     }
 

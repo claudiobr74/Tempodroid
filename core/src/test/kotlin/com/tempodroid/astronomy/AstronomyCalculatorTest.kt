@@ -95,11 +95,30 @@ class AstronomyCalculatorTest {
             aboveHorizon = true,
         )
 
-        assertTrue(rising.normalizedY > 0.65f)
-        assertTrue(transit.normalizedY < 0.28f)
-        assertTrue(setting.normalizedY > 0.70f)
+        assertTrue(rising.normalizedY in 0.48f..0.60f)
+        assertTrue(transit.normalizedY < 0.20f)
+        assertTrue(setting.normalizedY in 0.54f..0.65f)
         assertTrue(rising.normalizedX < transit.normalizedX)
         assertTrue(transit.normalizedX < setting.normalizedX)
+    }
+
+    @Test
+    fun september27EveningMoonUsesRealAltitudeAndLivesInVisibleSkyBand() {
+        val data = calculator.compute(
+            latitude = goianiaLat,
+            longitude = goianiaLon,
+            date = LocalDate.of(2026, 9, 27),
+            timezone = zone,
+            at = LocalTime.of(20, 31),
+        )
+        val moon = requireNotNull(data.moonPosition)
+        val rise = requireNotNull(data.moonrise)
+
+        assertTrue("moonrise=$rise", rise.hour == 19)
+        assertTrue("altitude=${moon.altitudeDegrees}", requireNotNull(moon.altitudeDegrees) in 14.0..22.0)
+        assertTrue("y=${moon.normalizedY}", moon.normalizedY in 0.42f..0.55f)
+        assertTrue("x=${moon.normalizedX}", moon.normalizedX < 0.25f)
+        assertTrue(moon.aboveHorizon)
     }
 
     @Test
